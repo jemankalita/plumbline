@@ -26,11 +26,11 @@ export async function api<T = unknown>(url: string, init?: { method?: string; bo
 
 type Variant = "primary" | "secondary" | "ghost" | "danger" | "success";
 const VARIANT: Record<Variant, string> = {
-  primary: "bg-navy text-white hover:bg-sky-700 shadow-[0_1px_0_rgb(255_255_255/0.12)_inset,0_6px_16px_-8px_rgb(13_34_54/0.6)]",
-  secondary: "bg-white text-navy border border-line hover:border-sky-300 hover:bg-sky-50",
-  ghost: "text-ink hover:bg-sky-100/70",
-  danger: "bg-white text-coral-700 border border-coral/30 hover:bg-coral-50",
-  success: "bg-mint text-white hover:bg-mint-700",
+  primary: "bg-lime text-soot hover:bg-lime-600",
+  secondary: "bg-white text-ink ring-1 ring-inset ring-ash-200 hover:bg-ash-50 hover:ring-ash-300",
+  ghost: "text-ink hover:bg-ash-100",
+  danger: "bg-white text-red-700 ring-1 ring-inset ring-red/30 hover:bg-red-50",
+  success: "bg-ink text-white hover:bg-soot-3",
 };
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -50,9 +50,9 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       disabled={disabled || loading}
       className={cx(
         "inline-flex select-none items-center justify-center gap-1.5 whitespace-nowrap rounded-lg font-medium",
-        "transition-[transform,background-color,border-color,box-shadow,color] duration-150 ease-out active:scale-[0.97]",
+        "transition-[transform,background-color,box-shadow,color] duration-150 ease-out active:scale-[0.97]",
         "disabled:pointer-events-none disabled:opacity-50",
-        size === "sm" ? "h-8 px-2.5 text-[13px]" : "h-10 px-4 text-sm",
+        size === "sm" ? "h-8 px-3 text-[13px]" : "h-11 px-4 text-[15px]",
         VARIANT[variant],
         className
       )}
@@ -67,9 +67,9 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
 // ---------- labels and badges ----------
 
 export const SEVERITY: Record<Severity, { label: string; cls: string; dot: string }> = {
-  blocker: { label: "Blocker", cls: "bg-coral-50 text-coral-700 ring-coral/25", dot: "bg-coral" },
+  blocker: { label: "Blocker", cls: "bg-red-50 text-red-700 ring-red/25", dot: "bg-red" },
   warning: { label: "Warning", cls: "bg-amber-50 text-amber-700 ring-amber/25", dot: "bg-amber" },
-  suggestion: { label: "Suggestion", cls: "bg-sky-100 text-sky-700 ring-sky-400/25", dot: "bg-sky-400" },
+  suggestion: { label: "Suggestion", cls: "bg-ash-100 text-ash-700 ring-ash-300/60", dot: "bg-ash-500" },
 };
 
 export const ISSUE: Record<IssueType, string> = {
@@ -84,17 +84,17 @@ export const ISSUE: Record<IssueType, string> = {
 };
 
 export const CLAIM: Record<ClaimStatus, { label: string; cls: string }> = {
-  supported: { label: "Supported", cls: "text-mint-700 bg-mint-50" },
-  unsupported: { label: "Unsupported", cls: "text-coral-700 bg-coral-50" },
+  supported: { label: "Supported", cls: "text-green-700 bg-green-50" },
+  unsupported: { label: "Unsupported", cls: "text-red-700 bg-red-50" },
   outdated: { label: "Outdated", cls: "text-amber-700 bg-amber-50" },
   contradicted: { label: "Contradicted", cls: "text-amber-700 bg-amber-50" },
 };
 
 export const STATUS: Record<SubmissionStatus, { label: string; cls: string }> = {
-  draft: { label: "Draft", cls: "bg-white text-ink ring-line" },
-  in_review: { label: "Awaiting approval", cls: "bg-sky-100 text-sky-700 ring-sky-300/50" },
+  draft: { label: "Draft", cls: "bg-white text-ink ring-ash-200" },
+  in_review: { label: "Awaiting approval", cls: "bg-lime text-soot ring-lime-600" },
   changes_requested: { label: "Changes requested", cls: "bg-amber-50 text-amber-700 ring-amber/25" },
-  approved: { label: "Approved", cls: "bg-mint-50 text-mint-700 ring-mint/25" },
+  approved: { label: "Approved", cls: "bg-green-50 text-green-700 ring-green/25" },
 };
 
 export const DECISION: Record<FindingStatus, string> = {
@@ -108,7 +108,7 @@ export const DECISION: Record<FindingStatus, string> = {
 
 export function Pill({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <span className={cx("inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 font-mono text-[10.5px] uppercase tracking-[0.08em] ring-1 ring-inset", className)}>
+    <span className={cx("inline-flex items-center gap-1.5 whitespace-nowrap rounded-md px-2 py-0.5 text-[12.5px] font-medium leading-5 ring-1 ring-inset", className)}>
       {children}
     </span>
   );
@@ -130,9 +130,9 @@ export function StatusPill({ s }: { s: SubmissionStatus }) {
 // ---------- score ring ----------
 
 export function scoreTone(score: number) {
-  if (score >= 85) return { stroke: "var(--color-mint)", text: "text-mint-700", word: "On brand" };
+  if (score >= 85) return { stroke: "var(--color-green)", text: "text-green-700", word: "On brand" };
   if (score >= 60) return { stroke: "var(--color-amber)", text: "text-amber-700", word: "Needs work" };
-  return { stroke: "var(--color-coral)", text: "text-coral-700", word: "Off brand" };
+  return { stroke: "var(--color-red)", text: "text-red-700", word: "Off brand" };
 }
 
 export function ScoreRing({ score, size = 64, stroke = 6, label = true }: { score: number; size?: number; stroke?: number; label?: boolean }) {
@@ -149,7 +149,7 @@ export function ScoreRing({ score, size = 64, stroke = 6, label = true }: { scor
   return (
     <div className="relative inline-grid place-items-center" style={{ width: size, height: size }} role="img" aria-label={`Brand score ${score} out of 100`}>
       <svg width={size} height={size} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--color-sky-100)" strokeWidth={stroke} />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--color-ash-200)" strokeWidth={stroke} />
         <motion.circle
           cx={size / 2}
           cy={size / 2}
@@ -157,13 +157,13 @@ export function ScoreRing({ score, size = 64, stroke = 6, label = true }: { scor
           fill="none"
           stroke={tone.stroke}
           strokeWidth={stroke}
-          strokeLinecap="round"
+          strokeLinecap="butt"
           strokeDasharray={c}
           style={{ strokeDashoffset: offset }}
         />
       </svg>
       {label && (
-        <motion.span className={cx("num absolute font-serif leading-none", tone.text)} style={{ fontSize: size * 0.36 }}>
+        <motion.span className={cx("num absolute font-display font-semibold leading-none tracking-[-0.04em]", tone.text)} style={{ fontSize: size * 0.36 }}>
           {shown}
         </motion.span>
       )}
@@ -173,37 +173,39 @@ export function ScoreRing({ score, size = 64, stroke = 6, label = true }: { scor
 
 // ---------- misc ----------
 
-export function Logo({ className }: { className?: string }) {
+export function Logo({ className, tone = "ink" }: { className?: string; tone?: "ink" | "paper" }) {
+  const c = tone === "ink" ? "var(--color-ink)" : "#fff";
   return (
     <span className={cx("inline-flex items-center gap-2", className)}>
-      <svg viewBox="0 0 24 24" className="size-6" aria-hidden>
-        <line x1="12" y1="1.5" x2="12" y2="14" stroke="var(--color-navy)" strokeWidth="1.6" />
-        <path d="M12 13.5 L16 18.5 L12 23 L8 18.5 Z" fill="var(--color-sky-600)" />
-        <rect x="6" y="1" width="12" height="2.2" rx="1.1" fill="var(--color-navy)" />
+      <svg viewBox="0 0 14 24" className="h-6 w-3.5" aria-hidden>
+        <rect x="6.4" y="0" width="1.2" height="12" fill={c} />
+        <path d="M7 11 L12 17 L7 24 L2 17 Z" fill="var(--color-lime)" stroke={c} strokeWidth="1.2" strokeLinejoin="round" />
       </svg>
-      <span className="font-serif text-[22px] leading-none tracking-tight text-navy">Plumbline</span>
+      <span className="text-[21px] font-semibold leading-none tracking-[-0.04em]" style={{ color: c }}>
+        Plumbline
+      </span>
     </span>
   );
 }
 
 export function Card({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cx("rounded-2xl border border-line bg-white shadow-soft", className)}>{children}</div>;
+  return <div className={cx("rounded-lg bg-white", className)}>{children}</div>;
 }
 
 export function Field({ label, hint, children, htmlFor }: { label: string; hint?: string; children: ReactNode; htmlFor?: string }) {
   return (
     <div className="grid gap-1.5">
-      <label htmlFor={htmlFor} className="text-[13px] font-medium text-navy">
+      <label htmlFor={htmlFor} className="text-[14px] font-medium text-ink">
         {label}
       </label>
       {children}
-      {hint && <p className="text-xs text-muted">{hint}</p>}
+      {hint && <p className="text-[13px] text-muted">{hint}</p>}
     </div>
   );
 }
 
 export const inputCls =
-  "w-full rounded-lg border border-line bg-white px-3 py-2 text-sm text-navy placeholder:text-muted/70 transition-[border-color,box-shadow] duration-150 focus:border-sky-400 focus:outline-none focus:ring-4 focus:ring-sky-100";
+  "w-full rounded-lg border border-ash-200 bg-white px-3 py-2 text-[15px] text-ink placeholder:text-ash-500 transition-[border-color,box-shadow] duration-150 focus:border-ink focus:outline-none focus:ring-2 focus:ring-lime";
 
 export function ErrorNote({ error }: { error: string | null }) {
   if (!error) return null;
@@ -212,7 +214,7 @@ export function ErrorNote({ error }: { error: string | null }) {
       initial={{ opacity: 0, y: -4 }}
       animate={{ opacity: 1, y: 0 }}
       role="alert"
-      className="rounded-lg border border-coral/25 bg-coral-50 px-3 py-2 text-[13px] text-coral-700"
+      className="rounded-lg bg-red-50 px-3 py-2 text-[14px] text-red-700"
     >
       {error}
     </motion.p>

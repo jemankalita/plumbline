@@ -18,12 +18,12 @@ export function QueueList({ items }: { items: SubmissionSummary[] }) {
         >
           <Link
             href={`/s/${s.id}`}
-            className="group grid grid-cols-[auto_1fr_auto] items-center gap-4 rounded-2xl border border-line bg-white p-3.5 pr-4 shadow-soft transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-px hover:border-sky-300 hover:shadow-lift sm:p-4"
+            className="group grid grid-cols-[auto_1fr_auto] items-center gap-4 rounded-2xl border border-line bg-white p-3.5 pr-4 transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-px hover:border-ash-300 hover:shadow-lift sm:p-4"
           >
             <ScoreRing score={s.score} size={52} stroke={5} />
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                <h2 className="truncate font-medium text-navy">{s.title}</h2>
+                <h2 className="truncate font-medium text-ink">{s.title}</h2>
                 <StatusPill s={s.status} />
                 {s.aiAssisted && (
                   <Pill className="bg-white text-muted ring-line">
@@ -32,25 +32,25 @@ export function QueueList({ items }: { items: SubmissionSummary[] }) {
                 )}
               </div>
               <p className="mt-1 line-clamp-1 text-sm text-muted">{s.excerpt}</p>
-              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
+              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-muted">
                 <span>{s.channel}</span>
                 <span aria-hidden>·</span>
                 <span>v{s.version}</span>
                 <span aria-hidden>·</span>
                 <span>{timeAgo(s.updatedAt)}</span>
                 <span className="flex items-center gap-2.5 sm:ml-2">
-                  <Count n={s.blockers} cls="bg-coral" label="blockers" />
+                  <Count n={s.blockers} cls="bg-red" label="blockers" />
                   <Count n={s.warnings} cls="bg-amber" label="warnings" />
-                  <Count n={s.suggestions} cls="bg-sky-400" label="suggestions" />
+                  <Count n={s.suggestions} cls="bg-ash-400" label="suggestions" />
                 </span>
                 {s.routed > 0 && (
-                  <span className="flex items-center gap-1 text-sky-700">
+                  <span className="flex items-center gap-1 text-ash-700">
                     <ShieldQuestion className="size-3.5" /> {s.routed} routed to reviewer
                   </span>
                 )}
               </div>
             </div>
-            <ChevronRight className="size-5 text-sky-300 transition-transform group-hover:translate-x-0.5 group-hover:text-sky-600" />
+            <ChevronRight className="size-5 text-ash-300 transition-transform group-hover:translate-x-0.5 group-hover:text-ash-600" />
           </Link>
         </motion.li>
       ))}

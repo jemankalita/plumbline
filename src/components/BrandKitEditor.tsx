@@ -73,7 +73,7 @@ export function BrandKitEditor({ kit, canEdit, aiOn, today }: { kit: BrandKit; c
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="kicker">Source of truth</p>
-          <h1 className="mt-1 font-serif text-[40px] leading-none tracking-tight text-navy sm:text-5xl">{kit.name} Brand Kit</h1>
+          <h1 className="mt-1 font-display text-[40px] leading-none tracking-tight text-ink sm:text-5xl">{kit.name} Brand Kit</h1>
           <p className="mt-2 max-w-2xl text-[15px] text-muted">
             Every finding must cite one of these records. Change a rule here and the next check uses it straight away.
           </p>
@@ -87,22 +87,22 @@ export function BrandKitEditor({ kit, canEdit, aiOn, today }: { kit: BrandKit; c
 
       {!canEdit && (
         <p className="flex items-center gap-2 rounded-xl border border-line bg-white px-4 py-2.5 text-sm text-ink">
-          <Lock className="size-4 text-sky-600" /> Read-only. Switch to <b className="font-medium text-navy">Admin</b> in the top bar to edit the kit.
+          <Lock className="size-4 text-ash-600" /> Read-only. Switch to <b className="font-medium text-ink">Admin</b> in the top bar to edit the kit.
         </p>
       )}
 
-      <div className="flex gap-1 overflow-x-auto rounded-xl bg-sky-100/60 p-1 text-sm sm:w-fit" role="tablist">
+      <div className="flex gap-1 overflow-x-auto rounded-xl bg-ash-100/60 p-1 text-sm sm:w-fit" role="tablist">
         {TABS.map((t) => (
           <button
             key={t.id}
             role="tab"
             aria-selected={tab === t.id}
             onClick={() => setTab(t.id)}
-            className={cx("relative shrink-0 rounded-lg px-3 py-1.5 transition-colors", tab === t.id ? "font-medium text-navy" : "text-muted hover:text-navy")}
+            className={cx("relative shrink-0 rounded-lg px-3 py-1.5 transition-colors", tab === t.id ? "font-medium text-ink" : "text-muted hover:text-ink")}
           >
-            {tab === t.id && <motion.span layoutId="kit-tab" className="absolute inset-0 rounded-lg bg-white shadow-soft" transition={{ type: "spring", stiffness: 500, damping: 40 }} />}
+            {tab === t.id && <motion.span layoutId="kit-tab" className="absolute inset-0 rounded-lg bg-white" transition={{ type: "spring", stiffness: 500, damping: 40 }} />}
             <span className="relative">
-              {t.label} {t.n != null && <span className="num text-sky-600">{t.n}</span>}
+              {t.label} {t.n != null && <span className="num text-ash-600">{t.n}</span>}
             </span>
           </button>
         ))}
@@ -120,19 +120,19 @@ export function BrandKitEditor({ kit, canEdit, aiOn, today }: { kit: BrandKit; c
             >
               {kit.rules.map((r) => (
                 <Row key={r.id} canEdit={canEdit} busy={busy === r.id} onEdit={() => setEditing({ kind: "rules", item: r })} onDelete={() => remove("rules", r.id)}>
-                  <span className="num w-10 shrink-0 font-mono text-xs text-sky-600">§{r.section}</span>
+                  <span className="num w-10 shrink-0 num text-[13px] text-ash-600">§{r.section}</span>
                   <div className="min-w-0 flex-1">
-                    <p className="font-medium text-navy">{r.title}</p>
+                    <p className="font-medium text-ink">{r.title}</p>
                     <p className="mt-0.5 text-sm text-muted">{r.text}</p>
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       <SeverityBadge s={r.severity} />
                       <Pill className="bg-white text-muted ring-line">{ISSUE[r.category]}</Pill>
                       {r.check ? (
-                        <Pill className="bg-sky-50 text-sky-700 ring-sky-200">
+                        <Pill className="bg-ash-50 text-ash-700 ring-ash-200">
                           <Cpu className="size-3" /> {CHECK_LABEL[r.check.kind]}
                         </Pill>
                       ) : (
-                        <Pill className="bg-white text-sky-700 ring-sky-200">
+                        <Pill className="bg-white text-ash-700 ring-ash-200">
                           <Sparkles className="size-3" /> AI judgement
                         </Pill>
                       )}
@@ -148,11 +148,11 @@ export function BrandKitEditor({ kit, canEdit, aiOn, today }: { kit: BrandKit; c
               {kit.terms.map((t) => (
                 <Row key={t.id} canEdit={canEdit} busy={busy === t.id} onEdit={() => setEditing({ kind: "terms", item: t })} onDelete={() => remove("terms", t.id)}>
                   <div className="min-w-0 flex-1">
-                    <p className="font-serif text-[22px] leading-tight text-navy">{t.preferred}</p>
-                    <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs">
+                    <p className="font-display text-[22px] leading-tight text-ink">{t.preferred}</p>
+                    <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[13px]">
                       <span className="text-muted">Not:</span>
                       {t.banned.map((b) => (
-                        <span key={b} className="rounded-md bg-coral-50 px-1.5 py-0.5 text-coral-700 line-through decoration-coral/40">
+                        <span key={b} className="rounded-md bg-red-50 px-1.5 py-0.5 text-red-700 line-through decoration-red/40">
                           {b}
                         </span>
                       ))}
@@ -170,9 +170,9 @@ export function BrandKitEditor({ kit, canEdit, aiOn, today }: { kit: BrandKit; c
                 const d = f.expiresOn ? daysUntil(f.expiresOn, today) : null;
                 return (
                   <Row key={f.id} canEdit={canEdit} busy={busy === f.id} onEdit={() => setEditing({ kind: "facts", item: f })} onDelete={() => remove("facts", f.id)}>
-                    <span className="num w-10 shrink-0 font-mono text-xs text-sky-600">{f.id}</span>
+                    <span className="num w-10 shrink-0 num text-[13px] text-ash-600">{f.id}</span>
                     <div className="min-w-0 flex-1">
-                      <p className="font-serif text-[20px] leading-snug text-navy">“{f.statement}”</p>
+                      <p className="font-display text-[20px] leading-snug text-ink">“{f.statement}”</p>
                       <p className="mt-1 text-sm text-muted">
                         {f.source} · owner: {f.owner}
                         {f.value != null && <span className="num"> · value {f.value.toLocaleString("en-IN")}</span>}
@@ -181,14 +181,14 @@ export function BrandKitEditor({ kit, canEdit, aiOn, today }: { kit: BrandKit; c
                         {d == null ? (
                           <Pill className="bg-white text-muted ring-line">No expiry</Pill>
                         ) : d < 0 ? (
-                          <Pill className="bg-coral-50 text-coral-700 ring-coral/25">Expired {f.expiresOn}</Pill>
+                          <Pill className="bg-red-50 text-red-700 ring-red/25">Expired {f.expiresOn}</Pill>
                         ) : d <= 30 ? (
                           <Pill className="bg-amber-50 text-amber-700 ring-amber/25">Expires in {d} days</Pill>
                         ) : (
-                          <Pill className="bg-mint-50 text-mint-700 ring-mint/25">Valid to {f.expiresOn}</Pill>
+                          <Pill className="bg-green-50 text-green-700 ring-green/25">Valid to {f.expiresOn}</Pill>
                         )}
                         {f.keywords.map((k) => (
-                          <span key={k} className="rounded-md bg-sky-50 px-1.5 py-0.5 text-xs text-sky-700">
+                          <span key={k} className="rounded-md bg-ash-50 px-1.5 py-0.5 text-[13px] text-ash-700">
                             {k}
                           </span>
                         ))}
@@ -216,8 +216,8 @@ function Stat({ n, label, hot }: { n: number; label: string; hot?: boolean }) {
   return (
     <div>
       <dt className="sr-only">{label}</dt>
-      <dd className={cx("num font-serif text-3xl leading-none", hot ? "text-coral" : "text-navy")}>{n}</dd>
-      <span className="text-xs text-muted">{label}</span>
+      <dd className={cx("num font-display text-3xl leading-none", hot ? "text-red" : "text-ink")}>{n}</dd>
+      <span className="text-[13px] text-muted">{label}</span>
     </div>
   );
 }
@@ -243,10 +243,10 @@ function Row({ children, canEdit, busy, onEdit, onDelete }: { children: React.Re
       {children}
       {canEdit && (
         <div className="flex shrink-0 gap-0.5 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
-          <button onClick={onEdit} className="grid size-8 place-items-center rounded-lg text-muted hover:bg-sky-50 hover:text-navy" aria-label="Edit">
+          <button onClick={onEdit} className="grid size-8 place-items-center rounded-lg text-muted hover:bg-ash-50 hover:text-ink" aria-label="Edit">
             <Pencil className="size-4" />
           </button>
-          <button onClick={onDelete} disabled={busy} className="grid size-8 place-items-center rounded-lg text-muted hover:bg-coral-50 hover:text-coral-700" aria-label="Delete">
+          <button onClick={onDelete} disabled={busy} className="grid size-8 place-items-center rounded-lg text-muted hover:bg-red-50 hover:text-red-700" aria-label="Delete">
             <Trash2 className="size-4" />
           </button>
         </div>
@@ -335,7 +335,7 @@ function EditorModal({
 
   return (
     <motion.div className="fixed inset-0 z-50 grid place-items-center p-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-      <div className="absolute inset-0 bg-navy/30 backdrop-blur-[2px]" onClick={onClose} />
+      <div className="absolute inset-0 bg-soot/50" onClick={onClose} />
       <motion.form
         role="dialog"
         aria-modal
@@ -351,10 +351,10 @@ function EditorModal({
         className="relative grid max-h-[90vh] w-full max-w-lg gap-4 overflow-y-auto rounded-2xl border border-line bg-white p-5 shadow-lift"
       >
         <div className="flex items-center justify-between">
-          <h2 className="font-serif text-2xl text-navy">
+          <h2 className="font-display text-2xl text-ink">
             {editing.item.id ? "Edit" : "New"} {title}
           </h2>
-          <button type="button" onClick={onClose} className="grid size-8 place-items-center rounded-lg hover:bg-sky-50" aria-label="Close">
+          <button type="button" onClick={onClose} className="grid size-8 place-items-center rounded-lg hover:bg-ash-50" aria-label="Close">
             <X className="size-4" />
           </button>
         </div>
@@ -404,7 +404,7 @@ function EditorModal({
             {s("checkKind") === "pattern" && (
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Pattern (regex)">
-                  <input required value={s("pattern")} onChange={set("pattern")} placeholder="\b(hurry|last chance)\b" className={cx(inputCls, "font-mono text-xs")} />
+                  <input required value={s("pattern")} onChange={set("pattern")} placeholder="\b(hurry|last chance)\b" className={cx(inputCls, "num text-[13px]")} />
                 </Field>
                 <Field label="Replacement (optional)">
                   <input value={s("fixText")} onChange={set("fixText")} className={inputCls} />
@@ -513,9 +513,9 @@ function VoicePalette({ kit, canEdit }: { kit: BrandKit; canEdit: boolean }) {
           value={voice}
           disabled={!canEdit}
           onChange={(e) => setVoice(e.target.value)}
-          className={cx(inputCls, "font-serif text-[19px] leading-relaxed disabled:bg-sky-25")}
+          className={cx(inputCls, "font-display text-[19px] leading-relaxed disabled:bg-ash-25")}
         />
-        <p className="text-xs text-muted">The AI judgement pass reads this, so tone is judged against your voice, not some generic idea of “correct” English.</p>
+        <p className="text-[13px] text-muted">The AI judgement pass reads this, so tone is judged against your voice, not some generic idea of “correct” English.</p>
       </Card>
       <Card className="grid gap-3 p-5">
         <p className="kicker">Palette · used by image checks</p>
@@ -531,9 +531,9 @@ function VoicePalette({ kit, canEdit }: { kit: BrandKit; canEdit: boolean }) {
                 aria-label={`${p.name} colour`}
               />
               <input value={p.name} disabled={!canEdit} onChange={(e) => setPalette(palette.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))} className={cx(inputCls, "flex-1")} />
-              <span className="num w-20 font-mono text-xs text-muted">{p.hex}</span>
+              <span className="num w-20 num text-[13px] text-muted">{p.hex}</span>
               {canEdit && (
-                <button onClick={() => setPalette(palette.filter((_, j) => j !== i))} className="grid size-8 place-items-center rounded-lg text-muted hover:bg-coral-50 hover:text-coral-700" aria-label={`Remove ${p.name}`}>
+                <button onClick={() => setPalette(palette.filter((_, j) => j !== i))} className="grid size-8 place-items-center rounded-lg text-muted hover:bg-red-50 hover:text-red-700" aria-label={`Remove ${p.name}`}>
                   <Trash2 className="size-4" />
                 </button>
               )}
@@ -635,7 +635,7 @@ function Importer({ canEdit, aiOn, onDone }: { canEdit: boolean; aiOn: boolean; 
   if (!canEdit) {
     return (
       <Card className="flex items-center gap-3 p-5 text-sm text-ink">
-        <Lock className="size-4 text-sky-600" /> Only admins can import guidelines.
+        <Lock className="size-4 text-ash-600" /> Only admins can import guidelines.
       </Card>
     );
   }
@@ -655,10 +655,10 @@ function Importer({ canEdit, aiOn, onDone }: { canEdit: boolean; aiOn: boolean; 
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="Paste your brand guidelines here, or upload the PDF your design agency gave you."
-          className="block w-full resize-y px-5 py-4 text-sm leading-relaxed text-navy outline-none placeholder:text-muted/60"
+          className="block w-full resize-y px-5 py-4 text-sm leading-relaxed text-ink outline-none placeholder:text-muted/60"
         />
-        <div className="flex flex-wrap items-center gap-3 border-t border-hair bg-sky-50/50 px-4 py-3">
-          <p className="text-xs text-muted">
+        <div className="flex flex-wrap items-center gap-3 border-t border-hair bg-ash-50/50 px-4 py-3">
+          <p className="text-[13px] text-muted">
             {aiOn ? "AI proposes rules, terms and facts. Nothing is added until you pick what to keep." : "Needs an AI key (GEMINI_API_KEY) on the server. You can still add rules by hand."}
           </p>
           <Button className="ml-auto" variant="primary" size="sm" loading={busy === "analyse"} disabled={!aiOn || text.trim().length < 40} icon={<Wand2 className="size-3.5" />} onClick={analyse}>
@@ -680,8 +680,8 @@ function Importer({ canEdit, aiOn, onDone }: { canEdit: boolean; aiOn: boolean; 
       {proposal && (
         <Card className="grid gap-4 p-5">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="font-serif text-2xl text-navy">Proposed additions</p>
-            <span className="text-xs text-muted">via {proposal.provider}. Untick anything you don&apos;t want.</span>
+            <p className="font-display text-2xl text-ink">Proposed additions</p>
+            <span className="text-[13px] text-muted">via {proposal.provider}. Untick anything you don&apos;t want.</span>
           </div>
           {proposal.voice && <Proposed id="voice" skip={skip} toggle={toggle} title="Voice" body={proposal.voice} />}
           {proposal.rules.map((r) => (
@@ -707,11 +707,11 @@ function Importer({ canEdit, aiOn, onDone }: { canEdit: boolean; aiOn: boolean; 
 function Proposed({ id, skip, toggle, title, body, tag }: { id: string; skip: Set<string>; toggle: (id: string) => void; title: string; body: string; tag?: string }) {
   const on = !skip.has(id);
   return (
-    <label className={cx("flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors", on ? "border-sky-300 bg-sky-50/50" : "border-line opacity-60")}>
-      <input type="checkbox" checked={on} onChange={() => toggle(id)} className="mt-1 size-4 accent-[var(--color-sky-600)]" />
+    <label className={cx("flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors", on ? "border-ash-300 bg-ash-50/50" : "border-line opacity-60")}>
+      <input type="checkbox" checked={on} onChange={() => toggle(id)} className="mt-1 size-4 accent-[var(--color-ash-600)]" />
       <span className="min-w-0">
-        <span className="flex flex-wrap items-center gap-2 text-sm font-medium text-navy">
-          {title} {tag && <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-sky-600">{tag}</span>}
+        <span className="flex flex-wrap items-center gap-2 text-sm font-medium text-ink">
+          {title} {tag && <span className="num text-[13px] text-ash-600">{tag}</span>}
         </span>
         <span className="block text-sm text-muted">{body}</span>
       </span>

@@ -46,7 +46,7 @@ export function FindingCard({
       onClick={onSelect}
       className={cx(
         "cursor-pointer rounded-2xl border bg-white p-4 transition-[border-color,box-shadow,opacity] duration-200",
-        active ? "border-navy shadow-lift" : "border-line shadow-soft hover:border-sky-300",
+        active ? "border-ink shadow-lift" : "border-line hover:border-ash-300",
         !open && !active && "opacity-75"
       )}
     >
@@ -60,49 +60,49 @@ export function FindingCard({
           </Pill>
         )}
         {f.needsReview && open && (
-          <Pill className="bg-sky-600 text-white ring-transparent">
+          <Pill className="bg-ash-600 text-white ring-transparent">
             <ShieldCheck className="size-3" /> Needs reviewer
           </Pill>
         )}
         {!open && (
-          <span className="ml-auto inline-flex items-center gap-1 text-xs font-medium text-mint-700">
+          <span className="ml-auto inline-flex items-center gap-1 text-[13px] font-medium text-green-700">
             <Check className="size-3.5" /> {DECISION[f.status]}
           </span>
         )}
       </header>
 
-      <p className="mt-3 font-serif text-[19px] leading-snug text-navy">
+      <p className="mt-3 font-display text-[19px] leading-snug text-ink">
         {f.start >= 0 ? <>“{f.quote}”</> : <span className="text-[17px]">Image · {f.quote}</span>}
       </p>
       <p className="mt-1.5 text-sm leading-relaxed text-ink">{f.message}</p>
 
       {f.fix && (
-        <div className="mt-3 rounded-xl bg-mint-50/70 px-3 py-2 text-sm">
-          <span className="kicker !text-mint-700">Suggested fix</span>
-          <p className="mt-0.5 text-navy">
-            {f.start >= 0 && <del className="mr-1.5 text-muted decoration-coral/60">{f.quote}</del>}
-            <ins className="font-medium text-mint-700 no-underline">{f.fix}</ins>
+        <div className="mt-3 rounded-xl bg-green-50/70 px-3 py-2 text-sm">
+          <span className="kicker !text-green-700">Suggested fix</span>
+          <p className="mt-0.5 text-ink">
+            {f.start >= 0 && <del className="mr-1.5 text-muted decoration-red/60">{f.quote}</del>}
+            <ins className="font-medium text-green-700 no-underline">{f.fix}</ins>
           </p>
           {f.fixBreaksIntent && (
-            <p className="mt-1 flex items-center gap-1 text-xs text-amber-700">
+            <p className="mt-1 flex items-center gap-1 text-[13px] text-amber-700">
               <AlertTriangle className="size-3.5" /> This fix may drop part of your key message. Edit it by hand instead.
             </p>
           )}
         </div>
       )}
 
-      <div className="mt-3 flex items-start gap-2 border-t border-hair pt-3 text-xs text-muted">
-        <BookOpen className="mt-0.5 size-3.5 shrink-0 text-sky-600" />
+      <div className="mt-3 flex items-start gap-2 border-t border-hair pt-3 text-[13px] text-muted">
+        <BookOpen className="mt-0.5 size-3.5 shrink-0 text-ash-600" />
         <p>
-          <span className="font-mono text-[10.5px] uppercase tracking-[0.1em] text-sky-700">{f.cites.label}</span> — {f.cites.excerpt}
+          <span className="num text-[13px] text-ash-700">{f.cites.label}</span> — {f.cites.excerpt}
         </p>
       </div>
 
       {f.reason && (
-        <p className="mt-2 flex items-start gap-2 rounded-lg bg-sky-50 px-2.5 py-1.5 text-xs text-ink">
-          <MessageSquareWarning className="mt-0.5 size-3.5 shrink-0 text-sky-600" />
+        <p className="mt-2 flex items-start gap-2 rounded-lg bg-ash-50 px-2.5 py-1.5 text-[13px] text-ink">
+          <MessageSquareWarning className="mt-0.5 size-3.5 shrink-0 text-ash-600" />
           <span>
-            <b className="font-medium capitalize text-navy">{f.decidedBy}:</b> {f.reason}
+            <b className="font-medium capitalize text-ink">{f.decidedBy}:</b> {f.reason}
           </span>
         </p>
       )}
@@ -153,7 +153,7 @@ export function FindingCard({
           </Button>
         )}
         {open && !isCreator && !canClear && !canOverride && (
-          <p className="text-xs text-muted">Read-only as {role}. The creator decides this one.</p>
+          <p className="text-[13px] text-muted">Read-only as {role}. The creator decides this one.</p>
         )}
       </div>
 

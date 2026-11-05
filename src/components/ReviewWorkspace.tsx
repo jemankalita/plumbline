@@ -137,10 +137,10 @@ export function ReviewWorkspace({ detail, palette, role }: { detail: SubmissionD
       {/* header */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
-          <Link href="/queue" className="inline-flex items-center gap-1 text-sm text-muted hover:text-navy">
+          <Link href="/queue" className="inline-flex items-center gap-1 text-sm text-muted hover:text-ink">
             <ArrowLeft className="size-4" /> Queue
           </Link>
-          <h1 className="mt-2 font-serif text-[34px] leading-[1.05] tracking-tight text-navy sm:text-[42px]">{sub.title}</h1>
+          <h1 className="mt-2 font-display text-[34px] leading-[1.05] tracking-tight text-ink sm:text-[42px]">{sub.title}</h1>
           <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted">
             <StatusPill s={sub.status} />
             <span>{sub.channel}</span>
@@ -165,11 +165,11 @@ export function ReviewWorkspace({ detail, palette, role }: { detail: SubmissionD
           <ScoreRing score={score} size={68} />
           <div className="leading-tight">
             <p className={cx("font-medium", tone.text)}>{tone.word}</p>
-            <p className="num text-xs text-muted">
+            <p className="num text-[13px] text-muted">
               {open.length} open · {blockers} blocker{blockers === 1 ? "" : "s"}
             </p>
             {revisions.length > 1 && (
-              <p className="num mt-0.5 text-xs text-muted">
+              <p className="num mt-0.5 text-[13px] text-muted">
                 v1 {revisions[0].score} → v{rev.n} {score}
               </p>
             )}
@@ -210,7 +210,7 @@ export function ReviewWorkspace({ detail, palette, role }: { detail: SubmissionD
                     aria-label="Compare with an earlier version"
                     value={diffWith ?? ""}
                     onChange={(e) => setDiffWith(e.target.value ? Number(e.target.value) : null)}
-                    className="h-8 rounded-lg border border-line bg-white px-2 text-xs text-ink"
+                    className="h-8 rounded-lg border border-line bg-white px-2 text-[13px] text-ink"
                   >
                     <option value="">Findings view</option>
                     {revisions.slice(0, -1).map((r) => (
@@ -244,7 +244,7 @@ export function ReviewWorkspace({ detail, palette, role }: { detail: SubmissionD
                   rows={8}
                   autoFocus
                   aria-label="Draft text"
-                  className="w-full resize-y bg-transparent font-serif text-[22px] leading-[1.6] text-navy outline-none"
+                  className="w-full resize-y bg-transparent font-display text-[22px] leading-[1.6] text-ink outline-none"
                 />
               ) : prev ? (
                 <DiffView before={prev.text} after={rev.text} />
@@ -253,7 +253,7 @@ export function ReviewWorkspace({ detail, palette, role }: { detail: SubmissionD
               )}
             </div>
             {(editing || accepted > 0) && sub.status !== "approved" && can(role, "editDraft") && (
-              <div className="flex flex-wrap items-center gap-2 border-t border-hair bg-sky-50/60 px-4 py-3">
+              <div className="flex flex-wrap items-center gap-2 border-t border-hair bg-ash-50/60 px-4 py-3">
                 <p className="text-[13px] text-ink">
                   {editing ? "Plumbline re-runs every check on the new version." : `${accepted} fix${accepted === 1 ? "" : "es"} applied. Save them as v${rev.n + 1} and re-check.`}
                 </p>
@@ -286,7 +286,7 @@ export function ReviewWorkspace({ detail, palette, role }: { detail: SubmissionD
               <ul className="mt-2 grid gap-1.5">
                 {rev.claims.map((c, i) => (
                   <li key={i} className="flex items-center justify-between gap-3 text-sm">
-                    <span className="truncate font-serif text-[17px] text-navy">“{c.quote}”</span>
+                    <span className="truncate font-display text-[17px] text-ink">“{c.quote}”</span>
                     <Pill className={cx("shrink-0 ring-transparent", CLAIM[c.status].cls)}>
                       {CLAIM[c.status].label}
                       {c.factId ? ` · ${c.factId}` : ""}
@@ -297,10 +297,10 @@ export function ReviewWorkspace({ detail, palette, role }: { detail: SubmissionD
             </Card>
           )}
 
-          <div className="flex items-start gap-2.5 rounded-2xl border border-dashed border-sky-300 bg-white/60 px-4 py-3 text-xs text-ink">
-            <Bot className="mt-0.5 size-4 shrink-0 text-sky-600" />
+          <div className="flex items-start gap-2.5 rounded-2xl border border-dashed border-ash-300 bg-white/60 px-4 py-3 text-[13px] text-ink">
+            <Bot className="mt-0.5 size-4 shrink-0 text-ash-600" />
             <p>
-              <b className="font-medium text-navy">AI use for this check: </b>
+              <b className="font-medium text-ink">AI use for this check: </b>
               {rev.ai.provider ? `${rev.ai.provider} (${rev.ai.passes.join(", ")} pass). ` : "none. "}
               {rev.ai.note} {rev.dropped > 0 && `The verifier rejected ${rev.dropped} AI finding(s) whose quote or rule didn't exist.`}
             </p>
@@ -309,7 +309,7 @@ export function ReviewWorkspace({ detail, palette, role }: { detail: SubmissionD
 
         {/* findings column */}
         <div className="grid min-w-0 gap-3 [&>*]:min-w-0">
-          <div className="flex gap-1 overflow-x-auto rounded-xl bg-sky-100/60 p-1 text-[13px]" role="tablist" aria-label="Filter findings">
+          <div className="flex gap-1 overflow-x-auto rounded-xl bg-ash-100/60 p-1 text-[13px]" role="tablist" aria-label="Filter findings">
             {(["open", "blocker", "warning", "suggestion", "all"] as Filter[]).map((k) => (
               <button
                 key={k}
@@ -318,12 +318,12 @@ export function ReviewWorkspace({ detail, palette, role }: { detail: SubmissionD
                 onClick={() => setFilter(k)}
                 className={cx(
                   "relative flex-1 whitespace-nowrap rounded-lg px-1.5 py-1.5 capitalize transition-colors",
-                  filter === k ? "font-medium text-navy" : "text-muted hover:text-navy"
+                  filter === k ? "font-medium text-ink" : "text-muted hover:text-ink"
                 )}
               >
-                {filter === k && <motion.span layoutId="filter-pill" className="absolute inset-0 rounded-lg bg-white shadow-soft" transition={{ type: "spring", stiffness: 500, damping: 40 }} />}
+                {filter === k && <motion.span layoutId="filter-pill" className="absolute inset-0 rounded-lg bg-white" transition={{ type: "spring", stiffness: 500, damping: 40 }} />}
                 <span className="relative">
-                  {k === "all" ? "All" : k === "open" ? "Open" : k + "s"} <span className="num text-sky-600">{counts[k]}</span>
+                  {k === "all" ? "All" : k === "open" ? "Open" : k + "s"} <span className="num text-ash-600">{counts[k]}</span>
                 </span>
               </button>
             ))}
@@ -331,8 +331,8 @@ export function ReviewWorkspace({ detail, palette, role }: { detail: SubmissionD
 
           {listed.length === 0 ? (
             <Card className="grid place-items-center gap-2 px-6 py-12 text-center">
-              <CheckCircle2 className="size-8 text-mint" />
-              <p className="font-serif text-2xl text-navy">{filter === "open" ? "Nothing open" : "Nothing here"}</p>
+              <CheckCircle2 className="size-8 text-green" />
+              <p className="font-display text-2xl text-ink">{filter === "open" ? "Nothing open" : "Nothing here"}</p>
               <p className="max-w-xs text-sm text-muted">
                 {filter === "open" ? "Every finding on this version has been decided." : "No findings of this kind on this version."}
               </p>
@@ -356,10 +356,10 @@ export function ReviewWorkspace({ detail, palette, role }: { detail: SubmissionD
             <ol className="mt-2.5 grid gap-2.5">
               {audit.slice(0, 12).map((a) => (
                 <li key={a.id} className="grid grid-cols-[auto_1fr] gap-2.5 text-[13px]">
-                  <span className="mt-1.5 size-1.5 rounded-full bg-sky-400" aria-hidden />
+                  <span className="mt-1.5 size-1.5 rounded-full bg-ash-400" aria-hidden />
                   <span>
-                    <span className="font-medium capitalize text-navy">{a.role}</span> <span className="text-ink">{a.detail}</span>
-                    <span className="block text-xs text-muted">{timeAgo(a.at)}</span>
+                    <span className="font-medium capitalize text-ink">{a.role}</span> <span className="text-ink">{a.detail}</span>
+                    <span className="block text-[13px] text-muted">{timeAgo(a.at)}</span>
                   </span>
                 </li>
               ))}
@@ -391,8 +391,8 @@ function WorkflowBar(props: {
   if (status === "approved") {
     body = (
       <>
-        <CheckCircle2 className="size-5 text-mint" />
-        <p className="text-sm text-navy">
+        <CheckCircle2 className="size-5 text-green" />
+        <p className="text-sm text-ink">
           <b className="font-medium">Approved for publishing.</b> Plumbline never publishes. Copy the final text into your tool.
         </p>
         <Button className="ml-auto" size="sm" variant="secondary" icon={props.copied ? <Check className="size-3.5" /> : <ClipboardCopy className="size-3.5" />} onClick={props.onCopy}>
@@ -404,8 +404,8 @@ function WorkflowBar(props: {
     const blocked = blockers > 0 || routed > 0;
     body = (
       <>
-        <ShieldAlert className={cx("size-5", blocked ? "text-coral" : "text-mint")} />
-        <p className="text-sm text-navy">
+        <ShieldAlert className={cx("size-5", blocked ? "text-red" : "text-green")} />
+        <p className="text-sm text-ink">
           {blocked
             ? `${blockers ? `${blockers} blocker${blockers > 1 ? "s" : ""} open` : ""}${blockers && routed ? " and " : ""}${routed ? `${routed} item${routed > 1 ? "s" : ""} waiting for a reviewer` : ""}. Override or wait before approving.`
             : "Pre-checked and clear of blockers. Ready for your sign-off."}
@@ -423,8 +423,8 @@ function WorkflowBar(props: {
   } else if (can(role, "submit") && (status === "draft" || status === "changes_requested")) {
     body = (
       <>
-        <Send className="size-5 text-sky-600" />
-        <p className="text-sm text-navy">
+        <Send className="size-5 text-ash-600" />
+        <p className="text-sm text-ink">
           {blockers ? `${blockers} blocker${blockers > 1 ? "s" : ""} still open. An approver will see ${blockers > 1 ? "them" : "it"}.` : "Looks good. Send it to an approver when you're ready."}
         </p>
         <Button className="ml-auto" size="sm" variant="primary" loading={busy === "send"} icon={<Send className="size-3.5" />} onClick={() => props.onAction("send")}>
@@ -435,8 +435,8 @@ function WorkflowBar(props: {
   } else if (can(role, "clearClaim") && routed > 0) {
     body = (
       <>
-        <ShieldAlert className="size-5 text-sky-600" />
-        <p className="text-sm text-navy">
+        <ShieldAlert className="size-5 text-ash-600" />
+        <p className="text-sm text-ink">
           {routed} item{routed > 1 ? "s" : ""} routed to you. Check each claim and clear it, or leave it for the creator to fix.
         </p>
       </>
@@ -446,7 +446,7 @@ function WorkflowBar(props: {
   }
 
   return (
-    <div className="rounded-2xl border border-line bg-white shadow-soft">
+    <div className="rounded-2xl border border-line bg-white">
       <div className="flex flex-wrap items-center gap-3 px-4 py-3">{body}</div>
       <AnimatePresence>
         {props.askChanges && (
@@ -473,14 +473,14 @@ function WorkflowBar(props: {
 function DiffView({ before, after }: { before: string; after: string }) {
   const parts = diffWords(before, after);
   return (
-    <div className="whitespace-pre-wrap font-serif text-[22px] leading-[1.6] text-navy">
+    <div className="whitespace-pre-wrap font-display text-[22px] leading-[1.6] text-ink">
       {parts.map((p, i) =>
         p.added ? (
-          <ins key={i} className="rounded bg-mint-50 px-0.5 text-mint-700 no-underline">
+          <ins key={i} className="rounded bg-green-50 px-0.5 text-green-700 no-underline">
             {p.value}
           </ins>
         ) : p.removed ? (
-          <del key={i} className="rounded bg-coral-50 px-0.5 text-coral-700/80">
+          <del key={i} className="rounded bg-red-50 px-0.5 text-red-700/80">
             {p.value}
           </del>
         ) : (
@@ -504,7 +504,7 @@ function ImagePanel({
 }) {
   return (
     <Card className="grid gap-3 px-4 py-3.5 sm:grid-cols-[140px_1fr]">
-      <div className="grid aspect-[4/3] w-full max-w-[220px] place-items-center overflow-hidden rounded-xl border border-line bg-sky-50">
+      <div className="grid aspect-[4/3] w-full max-w-[220px] place-items-center overflow-hidden rounded-xl border border-line bg-ash-50">
         {image.thumbnail ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={image.thumbnail} alt={image.altText || "Uploaded image (no alt text yet)"} className="size-full object-cover" />
@@ -521,9 +521,9 @@ function ImagePanel({
           <ImageIcon className="size-3.5" /> {image.name}
         </p>
         <p className="mt-1 text-sm text-ink">
-          Alt text: {image.altText?.trim() ? <span className="text-navy">“{image.altText}”</span> : <span className="text-coral-700">missing</span>}
+          Alt text: {image.altText?.trim() ? <span className="text-ink">“{image.altText}”</span> : <span className="text-red-700">missing</span>}
         </p>
-        <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-muted">
+        <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[13px] text-muted">
           <span>Dominant</span>
           {image.colors.map((c) => (
             <span key={c} className="num inline-flex items-center gap-1 rounded-md border border-line px-1.5 py-0.5">
@@ -532,7 +532,7 @@ function ImagePanel({
             </span>
           ))}
         </div>
-        <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs text-muted">
+        <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[13px] text-muted">
           <span>Brand</span>
           {palette.map((p) => (
             <span key={p.hex} title={p.name} className="size-4 rounded-sm ring-1 ring-black/10" style={{ background: p.hex }} />
@@ -541,7 +541,7 @@ function ImagePanel({
         {findings.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1.5">
             {findings.map((f) => (
-              <button key={f.id} onClick={() => onSelect(f.id)} className="rounded-md bg-sky-50 px-2 py-1 text-xs text-sky-700 hover:bg-sky-100">
+              <button key={f.id} onClick={() => onSelect(f.id)} className="rounded-md bg-ash-50 px-2 py-1 text-[13px] text-ash-700 hover:bg-ash-100">
                 {f.cites.label}: {f.status === "open" ? "open" : f.status}
               </button>
             ))}

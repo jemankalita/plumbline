@@ -48,3 +48,7 @@ next-env.d.ts
 # never commit secrets
 apikey.txt
 *.key
+
+# design working files and raw image downloads (optimised copies live in public/media)
+.taste-skill/
+assets/

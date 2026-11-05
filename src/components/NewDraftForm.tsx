@@ -132,9 +132,9 @@ export function NewDraftForm({ canSubmit, role }: { canSubmit: boolean; role: Ro
   if (!canSubmit) {
     return (
       <Card className="flex flex-wrap items-center gap-4 px-5 py-5">
-        <Lock className="size-5 text-sky-600" />
+        <Lock className="size-5 text-ash-600" />
         <p className="text-sm text-ink">
-          You&apos;re acting as <b className="font-medium capitalize text-navy">{role}</b>. Only creators and admins submit drafts.
+          You&apos;re acting as <b className="font-medium capitalize text-ink">{role}</b>. Only creators and admins submit drafts.
         </p>
         <Button className="ml-auto" variant="primary" onClick={becomeCreator}>
           Switch to Creator
@@ -147,7 +147,7 @@ export function NewDraftForm({ canSubmit, role }: { canSubmit: boolean; role: Ro
     <form onSubmit={submit} className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(300px,1fr)]">
       <Card className="overflow-hidden">
         <div
-          className={cx("relative transition-colors", dragging && "bg-sky-50")}
+          className={cx("relative transition-colors", dragging && "bg-ash-50")}
           onDragOver={(e) => {
             e.preventDefault();
             setDragging(true);
@@ -164,7 +164,7 @@ export function NewDraftForm({ canSubmit, role }: { canSubmit: boolean; role: Ro
         >
           <div className="flex flex-wrap items-center gap-2 border-b border-hair px-4 py-2.5">
             <p className="kicker">Content</p>
-            <span className="num ml-auto text-xs text-muted">{text.length.toLocaleString()} / 20,000</span>
+            <span className="num ml-auto text-[13px] text-muted">{text.length.toLocaleString()} / 20,000</span>
             <Button type="button" size="sm" variant="ghost" loading={parsing} icon={<FileUp className="size-3.5" />} onClick={() => fileRef.current?.click()}>
               Upload .docx / .pdf / .md
             </Button>
@@ -177,17 +177,17 @@ export function NewDraftForm({ canSubmit, role }: { canSubmit: boolean; role: Ro
             maxLength={20000}
             aria-label="Draft content"
             placeholder="Paste a caption, email, ad or web copy… or drop a file here."
-            className="block min-h-[260px] w-full resize-y bg-transparent px-5 py-4 font-serif text-[22px] leading-[1.55] text-navy outline-none placeholder:text-muted/50"
+            className="block min-h-[260px] w-full resize-y bg-transparent px-5 py-4 font-display text-[22px] leading-[1.55] text-ink outline-none placeholder:text-muted/50"
           />
           {dragging && (
-            <div className="pointer-events-none absolute inset-2 grid place-items-center rounded-xl border-2 border-dashed border-sky-400 bg-sky-50/80 text-sm font-medium text-sky-700">
+            <div className="pointer-events-none absolute inset-2 grid place-items-center rounded-xl border-2 border-dashed border-ash-400 bg-ash-50/80 text-sm font-medium text-ash-700">
               Drop to load text or image
             </div>
           )}
         </div>
-        <div className="flex flex-wrap items-center gap-2 border-t border-hair bg-sky-50/50 px-4 py-3">
-          <span className="flex items-center gap-1 text-xs text-muted">
-            <Sparkles className="size-3.5 text-sky-500" /> Try a sample:
+        <div className="flex flex-wrap items-center gap-2 border-t border-hair bg-ash-50/50 px-4 py-3">
+          <span className="flex items-center gap-1 text-[13px] text-muted">
+            <Sparkles className="size-3.5 text-ash-500" /> Try a sample:
           </span>
           {SAMPLES.map((s) => (
             <button
@@ -200,7 +200,7 @@ export function NewDraftForm({ canSubmit, role }: { canSubmit: boolean; role: Ro
                 setKeyMessage(s.key);
                 setText(s.text);
               }}
-              className="rounded-full border border-line bg-white px-2.5 py-1 text-xs text-ink transition-colors hover:border-sky-300 hover:text-navy"
+              className="rounded-full border border-line bg-white px-2.5 py-1 text-[13px] text-ink transition-colors hover:border-ash-300 hover:text-ink"
             >
               {s.label}
             </button>
@@ -223,19 +223,19 @@ export function NewDraftForm({ canSubmit, role }: { canSubmit: boolean; role: Ro
           <Field label="Key message (intent lock)" htmlFor="key" hint="Fixes that would remove these words are flagged instead of offered as one-click.">
             <input id="key" value={keyMessage} onChange={(e) => setKeyMessage(e.target.value)} maxLength={200} placeholder="e.g. Diwali delivery offer" className={inputCls} />
           </Field>
-          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-line p-3 transition-colors hover:border-sky-300">
-            <input type="checkbox" checked={aiAssisted} onChange={(e) => setAiAssisted(e.target.checked)} className="mt-0.5 size-4 accent-[var(--color-sky-600)]" />
+          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-line p-3 transition-colors hover:border-ash-300">
+            <input type="checkbox" checked={aiAssisted} onChange={(e) => setAiAssisted(e.target.checked)} className="mt-0.5 size-4 accent-[var(--color-ash-600)]" />
             <span>
-              <span className="flex items-center gap-1.5 text-sm font-medium text-navy">
-                <Bot className="size-4 text-sky-600" /> Drafted with AI
+              <span className="flex items-center gap-1.5 text-sm font-medium text-ink">
+                <Bot className="size-4 text-ash-600" /> Drafted with AI
               </span>
-              <span className="block text-xs text-muted">Tagged so Insights can compare AI and human drafts.</span>
+              <span className="block text-[13px] text-muted">Tagged so Insights can compare AI and human drafts.</span>
             </span>
           </label>
         </Card>
 
         <Card className="p-5">
-          <p className="text-[13px] font-medium text-navy">Image (optional)</p>
+          <p className="text-[13px] font-medium text-ink">Image (optional)</p>
           {image ? (
             <div className="mt-3 grid gap-3">
               <div className="flex gap-3">
@@ -243,16 +243,16 @@ export function NewDraftForm({ canSubmit, role }: { canSubmit: boolean; role: Ro
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={image.thumbnail} alt="" className="size-20 rounded-lg border border-line object-cover" />
                 ) : (
-                  <div className="size-20 rounded-lg border border-line bg-sky-50" />
+                  <div className="size-20 rounded-lg border border-line bg-ash-50" />
                 )}
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm text-navy">{image.name}</p>
+                  <p className="truncate text-sm text-ink">{image.name}</p>
                   <div className="mt-1.5 flex gap-1">
                     {image.colors.map((c) => (
                       <span key={c} title={c} className="size-5 rounded ring-1 ring-black/10" style={{ background: c }} />
                     ))}
                   </div>
-                  <button type="button" onClick={() => setImage(null)} className="mt-2 inline-flex items-center gap-1 text-xs text-coral-700 hover:underline">
+                  <button type="button" onClick={() => setImage(null)} className="mt-2 inline-flex items-center gap-1 text-[13px] text-red-700 hover:underline">
                     <Trash2 className="size-3" /> Remove
                   </button>
                 </div>
@@ -265,11 +265,11 @@ export function NewDraftForm({ canSubmit, role }: { canSubmit: boolean; role: Ro
             <button
               type="button"
               onClick={() => imgRef.current?.click()}
-              className="mt-3 grid w-full place-items-center gap-1.5 rounded-xl border border-dashed border-sky-300 bg-sky-50/50 px-4 py-6 text-sm text-sky-700 transition-colors hover:bg-sky-50"
+              className="mt-3 grid w-full place-items-center gap-1.5 rounded-xl border border-dashed border-ash-300 bg-ash-50/50 px-4 py-6 text-sm text-ash-700 transition-colors hover:bg-ash-50"
             >
               <ImagePlus className="size-5" />
               Add a banner or post image
-              <span className="text-xs text-muted">Colours are read in your browser. Only a small thumbnail is sent.</span>
+              <span className="text-[13px] text-muted">Colours are read in your browser. Only a small thumbnail is sent.</span>
             </button>
           )}
           <input ref={imgRef} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={(e) => e.target.files?.[0] && readImage(e.target.files[0])} />
@@ -283,18 +283,18 @@ export function NewDraftForm({ canSubmit, role }: { canSubmit: boolean; role: Ro
 
         <AnimatePresence>
           {running && (
-            <motion.ol initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="grid gap-1.5 rounded-2xl border border-line bg-white p-4 shadow-soft">
+            <motion.ol initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="grid gap-1.5 rounded-2xl border border-line bg-white p-4">
               {STEPS.map((s, i) => (
                 <li key={s} className="flex items-center gap-2.5 text-sm">
                   <span
                     className={cx(
-                      "grid size-5 place-items-center rounded-full text-[10px] transition-colors",
-                      i < step ? "bg-mint text-white" : i === step ? "bg-sky-100 text-sky-700" : "bg-sky-50 text-muted"
+                      "grid size-5 place-items-center rounded-full text-[13px] transition-colors",
+                      i < step ? "bg-green text-white" : i === step ? "bg-ash-100 text-ash-700" : "bg-ash-50 text-muted"
                     )}
                   >
                     {i < step ? <Check className="size-3" /> : i === step ? <Loader2 className="size-3 animate-spin" /> : i + 1}
                   </span>
-                  <span className={i <= step ? "text-navy" : "text-muted"}>{s}</span>
+                  <span className={i <= step ? "text-ink" : "text-muted"}>{s}</span>
                 </li>
               ))}
             </motion.ol>

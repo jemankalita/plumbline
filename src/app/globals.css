@@ -1,46 +1,69 @@
 @import "tailwindcss";
 
+/*
+  Plumbline tokens. One family (Bricolage Grotesque), soot and lime.
+  Soot brackets the marketing page; the workspace sits on paper with a soot rail.
+  Lime is the only action colour. Severity colours exist only to mark findings.
+*/
 @theme {
-  --font-serif: var(--font-instrument), Georgia, serif;
-  --font-sans: var(--font-hanken), "Segoe UI", system-ui, sans-serif;
-  --font-mono: var(--font-plex), Consolas, monospace;
+  --font-sans: var(--font-bricolage), "Segoe UI", system-ui, sans-serif;
+  --font-display: var(--font-bricolage), "Segoe UI", system-ui, sans-serif;
 
-  --color-sky-25: #f8fbfe;
-  --color-sky-50: #f2f7fc;
-  --color-sky-100: #e1eef9;
-  --color-sky-200: #c3ddf2;
-  --color-sky-300: #94c2e8;
-  --color-sky-400: #5fa3da;
-  --color-sky-500: #3a86c8;
-  --color-sky-600: #2569a8;
-  --color-sky-700: #1b4f80;
-  --color-navy: #0d2236;
-  --color-ink: #2b3b4d;
-  --color-muted: #607389;
-  --color-line: #d5e3f0;
-  --color-hair: #e6eef6;
-  --color-coral: #d9542f;
-  --color-coral-50: #fcede7;
-  --color-coral-700: #a63a1c;
-  --color-amber: #b07800;
-  --color-amber-50: #fff4d6;
-  --color-amber-700: #7a5a00;
-  --color-mint: #1f8a70;
-  --color-mint-50: #e2f3ee;
-  --color-mint-700: #146350;
+  --color-soot: #0f0f0f;
+  --color-soot-2: #1a1a1a;
+  --color-soot-3: #262626;
+  --color-lime: #dafa9c;
+  --color-lime-600: #c4ec74;
 
-  --shadow-soft: 0 1px 2px rgb(13 34 54 / 0.04), 0 8px 24px -12px rgb(13 34 54 / 0.12);
-  --shadow-lift: 0 1px 2px rgb(13 34 54 / 0.05), 0 18px 40px -18px rgb(13 34 54 / 0.25);
+  /* neutral ladder for the workspace */
+  --color-ash-25: #fafaf8;
+  --color-ash-50: #f3f3f0;
+  --color-ash-100: #e9e9e5;
+  --color-ash-200: #dcdcd6;
+  --color-ash-300: #c5c5bd;
+  --color-ash-400: #9b9b93;
+  --color-ash-500: #75756e;
+  --color-ash-600: #55554f;
+  --color-ash-700: #3a3a35;
+
+  --color-ink: #0f0f0f;
+  --color-muted: #5c5c56;
+  --color-line: #e2e2dc;
+  --color-hair: #ececE7;
+
+  --color-red: #d0361d;
+  --color-red-50: #fdebe6;
+  --color-red-700: #9f260f;
+  --color-amber: #b56d00;
+  --color-amber-50: #fff1d6;
+  --color-amber-700: #7a4a00;
+  --color-green: #2f7a33;
+  --color-green-50: #e7f2e2;
+  --color-green-700: #1f5a23;
+
+  --radius-sm: 2px;
+  --radius-md: 3px;
+  --radius-lg: 4px;
+  --radius-xl: 4px;
+  --radius-2xl: 6px;
+  --radius-3xl: 6px;
+
+  /* only things that truly float (menus, dialogs) get a shadow */
+  --shadow-lift: 0 18px 48px -12px rgb(15 15 15 / 0.28);
 
   --animate-shimmer: shimmer 1.6s linear infinite;
   @keyframes shimmer {
-    from { background-position: -200% 0; }
-    to { background-position: 200% 0; }
+    from { opacity: 0.55; }
+    50% { opacity: 1; }
+    to { opacity: 0.55; }
   }
 }
 
 :root {
   color-scheme: light;
+  --axis: 42vw;
+  --margin: clamp(16px, 2.2vw, 32px);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 html {
@@ -49,56 +72,77 @@ html {
 }
 
 body {
-  background: var(--color-sky-25);
+  background: var(--color-ash-50);
   color: var(--color-ink);
   font-family: var(--font-sans);
+  font-optical-sizing: auto;
 }
 
 h1, h2, h3 { text-wrap: balance; }
 p, li { text-wrap: pretty; }
 
-::selection { background: var(--color-sky-200); color: var(--color-navy); }
+::selection { background: var(--color-lime); color: var(--color-soot); }
 
 :focus-visible {
-  outline: 2px solid var(--color-sky-600);
+  outline: 2px solid var(--color-ink);
   outline-offset: 2px;
-  border-radius: 6px;
 }
+.on-soot :focus-visible { outline-color: var(--color-lime); }
 
 .num { font-variant-numeric: tabular-nums lining-nums; }
 
 /* Grid items may shrink below their content width, so long text wraps instead of overflowing on phones. */
 .grid > * { min-width: 0; }
 
+/* A plain sentence-case label for workspace UI (no tracked caps). */
 .kicker {
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--color-sky-600);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.3;
+  color: var(--color-muted);
 }
 
-/* draft highlights */
-.hl { border-radius: 3px; padding: 1px 0; cursor: pointer; transition-property: background-color, box-shadow; transition-duration: 150ms; }
-.hl-blocker { background: var(--color-coral-50); box-shadow: inset 0 -2px 0 var(--color-coral); }
+/* Draft highlights: a proof-reader's mark, a tinted band with a solid underline. */
+.hl { padding: 1px 0; cursor: pointer; transition-property: background-color, box-shadow; transition-duration: 150ms; }
+.hl-blocker { background: var(--color-red-50); box-shadow: inset 0 -2px 0 var(--color-red); }
 .hl-warning { background: var(--color-amber-50); box-shadow: inset 0 -2px 0 var(--color-amber); }
-.hl-suggestion { background: var(--color-sky-100); box-shadow: inset 0 -2px 0 var(--color-sky-400); }
-.hl-active { outline: 2px solid var(--color-navy); outline-offset: 1px; }
-.hl-done { background: var(--color-mint-50); box-shadow: inset 0 -2px 0 var(--color-mint); }
-
-.grid-paper {
-  background-image:
-    linear-gradient(to right, rgb(37 105 168 / 0.06) 1px, transparent 1px),
-    linear-gradient(to bottom, rgb(37 105 168 / 0.06) 1px, transparent 1px);
-  background-size: 28px 28px;
-}
+.hl-suggestion { background: var(--color-ash-100); box-shadow: inset 0 -2px 0 var(--color-ash-500); }
+.hl-active { background: var(--color-lime); box-shadow: inset 0 -2px 0 var(--color-ink); }
+.hl-done { background: var(--color-green-50); box-shadow: inset 0 -2px 0 var(--color-green); }
 
 .skeleton {
-  background: linear-gradient(90deg, var(--color-sky-50) 0%, var(--color-sky-100) 50%, var(--color-sky-50) 100%);
-  background-size: 200% 100%;
+  background: var(--color-ash-100);
   animation: var(--animate-shimmer);
 }
+
+/* ---------- marketing page ---------- */
+
+.display {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.045em;
+  line-height: 0.92;
+}
+
+/* masked line reveal: each headline line rises from behind its own baseline */
+.mask-line { display: block; overflow: hidden; padding-bottom: 0.08em; margin-bottom: -0.08em; }
+.mask-line > span { display: block; }
+
+.lift { transition: transform 160ms var(--ease-out), background-color 160ms var(--ease-out), color 160ms var(--ease-out); }
+.lift:hover { transform: translateY(-2px); }
+.lift:active { transform: translateY(0) scale(0.98); }
+
+.under-link {
+  text-decoration-line: underline;
+  text-decoration-thickness: 4px;
+  text-underline-offset: 6px;
+  transition: text-underline-offset 160ms var(--ease-out);
+}
+.under-link:hover { text-underline-offset: 10px; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
+
+/* Display headings in the workspace use the same cut as the marketing page. */
+.font-display { font-weight: 600; letter-spacing: -0.035em; }

@@ -90,6 +90,11 @@ CI (GitHub Actions) runs typecheck, tests and a production build on every push.
 | Insights + Guideline Gap Finder | ⏳ early version built; fuller version in Round 3 |
 | Logo / layout checks on full designs, learning from reviewer decisions, real auth (Supabase Auth) | Round 3 |
 
+## Picture credits
+
+The landing page uses museum and archive photographs of plumb bobs and printing, all under open licences. Each one is credited, with links, in the page footer:
+LACMA plumb bob (public domain); "Plumb bob with string" by Salil Kumar Mukherjee (CC BY-SA 4.0); "The Invention of Book Printing" by Stradanus, Cooper Hewitt (CC0); Kinney Bros. printing proof, 1889, The Met (CC0); Plumb bob with the name of Hatshepsut, The Met (CC0); "Roman plumb bob" by Gaius Cornelius (CC BY-SA 4.0); ceremonial plumb-bob, Fitzwilliam Museum, by SpeakingArch (CC BY-SA 4.0); plumb bob by the Portable Antiquities Scheme (CC BY 2.0).
+
 ## Disclosure
 
 AI coding assistance was used during development. In the product, Google Gemini is used only for the judgement pass, alt-text drafts and guideline import, and each use is shown in the UI.
