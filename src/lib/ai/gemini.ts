@@ -21,7 +21,7 @@ export class LlmError extends Error {
 
 function candidates(): string[] {
   const preferred = process.env.GEMINI_MODEL?.trim();
-  return [...new Set([preferred, "gemini-2.5-flash", "gemini-flash-latest"].filter(Boolean) as string[])];
+  return [...new Set([preferred, "gemini-2.5-flash", "gemini-flash-latest", "gemini-3.1-flash-lite"].filter(Boolean) as string[])];
 }
 
 /** Strip code fences and parse the first JSON value in a model reply. */
@@ -39,6 +39,9 @@ export function parseJson<T>(raw: string): T {
 
 let workingModel: string | null = null;
 
+// Overload, rate-limit and server errors are worth trying on the next model; bad requests are not.
+const RETRYABLE = new Set([404, 429, 500, 502, 503, 504]);
+
 export function geminiProvider(): LlmProvider | null {
   const key = process.env.GEMINI_API_KEY?.trim();
   if (!key) return null;
@@ -47,7 +50,7 @@ export function geminiProvider(): LlmProvider | null {
       return `Google Gemini · ${workingModel ?? candidates()[0]}`;
     },
     async json<T>(system: string, parts: LlmPart[], opts?: { timeoutMs?: number }): Promise<T> {
-      const models = workingModel ? [workingModel] : candidates();
+      const models = [...new Set([workingModel, ...candidates()].filter(Boolean) as string[])];
       let lastError: unknown = null;
       for (const model of models) {
         const res = await fetch(`${ENDPOINT}/${model}:generateContent`, {
@@ -58,19 +61,18 @@ export function geminiProvider(): LlmProvider | null {
             contents: [{ role: "user", parts }],
             generationConfig: { responseMimeType: "application/json", temperature: 0.2 },
           }),
-          signal: AbortSignal.timeout(opts?.timeoutMs ?? 30000),
+          signal: AbortSignal.timeout(opts?.timeoutMs ?? 18000),
         }).catch((e: unknown) => {
           lastError = e;
           return null;
         });
         if (!res) continue;
-        if (res.status === 404) {
-          lastError = new LlmError(`Model ${model} not found`, 404);
-          continue;
-        }
         if (!res.ok) {
           const body = await res.text().catch(() => "");
-          throw new LlmError(`Gemini ${res.status}: ${body.slice(0, 200)}`, res.status);
+          const message = (/"message":\s*"([^"]+)"/.exec(body)?.[1] ?? body).slice(0, 160);
+          lastError = new LlmError(`Gemini ${res.status} on ${model}: ${message}`, res.status);
+          if (RETRYABLE.has(res.status)) continue;
+          throw lastError;
         }
         const data = (await res.json()) as {
           candidates?: { content?: { parts?: { text?: string }[] } }[];
