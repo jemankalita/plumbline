@@ -309,7 +309,7 @@ export function ReviewWorkspace({ detail, palette, role }: { detail: SubmissionD
 
         {/* findings column */}
         <div className="grid min-w-0 gap-3 [&>*]:min-w-0">
-          <div className="flex gap-1 overflow-x-auto rounded-xl bg-ash-100/60 p-1 text-[13px]" role="tablist" aria-label="Filter findings">
+          <div className="flex gap-1 overflow-x-auto rounded-lg bg-white p-1 ring-1 ring-line text-[13px]" role="tablist" aria-label="Filter findings">
             {(["open", "blocker", "warning", "suggestion", "all"] as Filter[]).map((k) => (
               <button
                 key={k}
@@ -318,12 +318,12 @@ export function ReviewWorkspace({ detail, palette, role }: { detail: SubmissionD
                 onClick={() => setFilter(k)}
                 className={cx(
                   "relative flex-1 whitespace-nowrap rounded-lg px-1.5 py-1.5 capitalize transition-colors",
-                  filter === k ? "font-medium text-ink" : "text-muted hover:text-ink"
+                  filter === k ? "font-medium text-white" : "text-ink hover:bg-ash-50"
                 )}
               >
-                {filter === k && <motion.span layoutId="filter-pill" className="absolute inset-0 rounded-lg bg-white" transition={{ type: "spring", stiffness: 500, damping: 40 }} />}
+                {filter === k && <motion.span layoutId="filter-pill" className="absolute inset-0 rounded-md bg-soot" transition={{ type: "spring", stiffness: 500, damping: 40 }} />}
                 <span className="relative">
-                  {k === "all" ? "All" : k === "open" ? "Open" : k + "s"} <span className="num text-ash-600">{counts[k]}</span>
+                  {k === "all" ? "All" : k === "open" ? "Open" : k + "s"} <span className="num opacity-70">{counts[k]}</span>
                 </span>
               </button>
             ))}

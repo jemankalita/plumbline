@@ -27,9 +27,9 @@
   --color-ash-700: #3a3a35;
 
   --color-ink: #0f0f0f;
-  --color-muted: #5c5c56;
-  --color-line: #e2e2dc;
-  --color-hair: #ececE7;
+  --color-muted: #4a4a45;
+  --color-line: #d3d3cb;
+  --color-hair: #e3e3dd;
 
   --color-red: #d0361d;
   --color-red-50: #fdebe6;
@@ -72,7 +72,7 @@ html {
 }
 
 body {
-  background: var(--color-ash-50);
+  background: #e9e8e2;
   color: var(--color-ink);
   font-family: var(--font-sans);
   font-optical-sizing: auto;
@@ -145,4 +145,4 @@ p, li { text-wrap: pretty; }
 }
 
 /* Display headings in the workspace use the same cut as the marketing page. */
-.font-display { font-weight: 600; letter-spacing: -0.035em; }
+:is(h1, h2, h3).font-display { font-weight: 600; letter-spacing: -0.035em; }

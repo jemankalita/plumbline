@@ -45,9 +45,10 @@ export function FindingCard({
       id={`finding-${f.id}`}
       onClick={onSelect}
       className={cx(
-        "cursor-pointer rounded-2xl border bg-white p-4 transition-[border-color,box-shadow,opacity] duration-200",
-        active ? "border-ink shadow-lift" : "border-line hover:border-ash-300",
-        !open && !active && "opacity-75"
+        "cursor-pointer rounded-lg border border-l-4 p-4 transition-[border-color,box-shadow,background-color] duration-200",
+        f.severity === "blocker" ? "border-l-red" : f.severity === "warning" ? "border-l-amber" : "border-l-ash-400",
+        open ? "bg-white" : "bg-ash-50",
+        active ? "border-y-ink border-r-ink ring-2 ring-lime" : "border-y-line border-r-line hover:border-y-ash-400 hover:border-r-ash-400"
       )}
     >
       <header className="flex flex-wrap items-center gap-1.5">
@@ -74,7 +75,7 @@ export function FindingCard({
       <p className="mt-3 font-display text-[19px] leading-snug text-ink">
         {f.start >= 0 ? <>“{f.quote}”</> : <span className="text-[17px]">Image · {f.quote}</span>}
       </p>
-      <p className="mt-1.5 text-sm leading-relaxed text-ink">{f.message}</p>
+      <p className="mt-1.5 text-[15px] leading-relaxed text-ink">{f.message}</p>
 
       {f.fix && (
         <div className="mt-3 rounded-xl bg-green-50/70 px-3 py-2 text-sm">

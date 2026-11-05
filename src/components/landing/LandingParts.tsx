@@ -1,13 +1,11 @@
 "use client";
 
-import { motion } from "motion/react";
-import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import type { FindingRow, ReviewResult } from "@/lib/types";
 import { DraftView } from "../DraftView";
 import { api, Button, cx, ErrorNote, Logo, ScoreRing, SeverityBadge } from "../ui";
-import { CREDITS, EASE, MEDIA, type KitColumn } from "./data";
+import { CREDITS, type KitColumn } from "./data";
 import { Reveal } from "./Landing";
 
 // ---------- one finding, shown whole like a plate in a manual ----------
@@ -288,25 +286,9 @@ export function Names({ columns }: { columns: KitColumn[] }) {
 // ---------- close: three photographs, a field, then the footer ----------
 
 export function Closing() {
-  const strip = [MEDIA.roman, MEDIA.fitzwilliam, MEDIA.pas];
   return (
     <>
-      <section aria-label="Plumb bobs from three museums" className="grid grid-cols-2 lg:grid-cols-3">
-        {strip.map((m, i) => (
-          <div key={m.src} className={cx("relative overflow-hidden", i === 0 ? "col-span-2 aspect-[4/3] lg:col-span-1 lg:aspect-auto lg:h-[40svh]" : "aspect-[4/3] lg:aspect-auto lg:h-[40svh]")}>
-            <motion.div
-              className="absolute inset-0"
-              initial={{ scale: 1.08 }}
-              whileInView={{ scale: 1 }}
-              viewport={{ once: true, amount: 0.3 }}
-              transition={{ duration: 1.4, ease: EASE }}
-            >
-              <Image src={m.src} alt={m.alt} fill sizes="(min-width: 1024px) 33vw, 50vw" className="object-cover" loading="lazy" />
-            </motion.div>
-          </div>
-        ))}
-      </section>
-      <section className="flex min-h-[44svh] flex-col justify-center bg-white px-[var(--margin)] py-20 text-soot">
+      <section className="flex min-h-[44svh] flex-col justify-center bg-ash-50 px-[var(--margin)] py-20 text-soot">
         <Reveal className="lg:max-w-[58%]">
           <p className="text-[22px] leading-[1.3] tracking-[-0.02em] lg:text-[30px]">
             Masons have checked walls with a weight on a string for four thousand years. Give your drafts the same test:{" "}

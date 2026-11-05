@@ -58,18 +58,18 @@ export default async function QueuePage(props: { searchParams: Promise<{ view?: 
       </dl>
 
       <section className="grid gap-3">
-        <div className="flex items-center gap-1 rounded-xl bg-ash-100/60 p-1 text-sm sm:w-fit">
+        <div className="flex items-center gap-1 rounded-lg bg-white p-1 text-[15px] ring-1 ring-line sm:w-fit">
           <Link
             href="/queue"
-            className={`flex-1 rounded-lg px-3 py-1.5 text-center transition-colors sm:flex-none ${filter === "mine" ? "bg-white font-medium text-ink" : "text-muted hover:text-ink"}`}
+            className={`flex-1 rounded-lg px-3 py-1.5 text-center transition-colors sm:flex-none ${filter === "mine" ? "bg-soot font-medium text-white" : "text-ink hover:bg-ash-50"}`}
           >
-            Needs you <span className="num ml-1 text-ash-600">{needsMe.length}</span>
+            Needs you <span className="num ml-1 opacity-70">{needsMe.length}</span>
           </Link>
           <Link
             href="/queue?view=all"
-            className={`flex-1 rounded-lg px-3 py-1.5 text-center transition-colors sm:flex-none ${filter === "all" ? "bg-white font-medium text-ink" : "text-muted hover:text-ink"}`}
+            className={`flex-1 rounded-lg px-3 py-1.5 text-center transition-colors sm:flex-none ${filter === "all" ? "bg-soot font-medium text-white" : "text-ink hover:bg-ash-50"}`}
           >
-            All drafts <span className="num ml-1 text-ash-600">{subs.length}</span>
+            All drafts <span className="num ml-1 opacity-70">{subs.length}</span>
           </Link>
         </div>
         {shown.length ? (

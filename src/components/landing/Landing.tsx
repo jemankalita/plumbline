@@ -41,23 +41,6 @@ export function Reveal({ i = 0, className, children, ...rest }: { i?: number; cl
 
 // ---------- masthead ----------
 
-type Img = (typeof MEDIA)[keyof typeof MEDIA];
-
-function Photo({ m, className, priority, contain }: { m: Img; className?: string; priority?: boolean; contain?: boolean }) {
-  return (
-    <div className={cx("relative overflow-hidden", className)}>
-      <Image
-        src={m.src}
-        alt={m.alt}
-        fill
-        priority={priority}
-        sizes="(min-width: 1024px) 33vw, 50vw"
-        className={contain ? "object-contain p-[8%]" : "object-cover"}
-      />
-    </div>
-  );
-}
-
 /** The plumb bob on its string keeps moving, very slightly, the way a real one settles. */
 function SwingingPhoto({ className }: { className?: string }) {
   const reduce = useReducedMotion();
@@ -75,23 +58,48 @@ function SwingingPhoto({ className }: { className?: string }) {
   );
 }
 
-function MarkFragment() {
+function DraftFragment() {
   return (
-    <div data-ui className="flex h-full flex-col justify-end bg-white p-[clamp(12px,1.4vw,22px)] text-soot">
-      <p className="text-[clamp(15px,1.25vw,20px)] leading-[1.45]">
-        This Diwali, get the <span className="hl hl-blocker">fastest delivery in India</span> with <span className="hl hl-warning">Quick-Kart</span>!
+    <div data-ui className="flex h-full flex-col bg-white p-[clamp(16px,2vw,32px)] text-soot">
+      <p className="text-[14px] font-medium text-muted">Diwali offer · Instagram caption · v1</p>
+      <p className="mt-auto text-[clamp(20px,2vw,30px)] leading-[1.45] tracking-[-0.01em]">
+        This Diwali, get the <span className="hl hl-blocker">fastest delivery in India</span> with <span className="hl hl-warning">Quick-Kart</span>! Over{" "}
+        <span className="hl hl-warning">2 lakh</span> happy customers trust us. Shop now, <span className="hl hl-suggestion">guys</span>!!!
       </p>
-      <p className="mt-3 text-[13px] text-muted">Rule 4.2 · needs an approved fact</p>
     </div>
   );
 }
 
 function ScoreFragment() {
   return (
-    <div data-ui className="flex h-full flex-col justify-between bg-soot-3 p-[clamp(12px,1.4vw,22px)] text-white">
-      <p className="text-[14px] text-ash-300">Brand score, v1</p>
-      <p className="num text-[clamp(48px,5vw,84px)] font-semibold leading-none tracking-[-0.05em] text-lime">64</p>
-      <p className="text-[14px] text-ash-300">1 blocker · 3 warnings</p>
+    <div data-ui className="flex h-full items-end justify-between gap-4 bg-soot-3 p-[clamp(16px,1.6vw,24px)] text-white">
+      <div>
+        <p className="text-[15px] text-ash-300">Brand score</p>
+        <p className="text-[15px] text-white">1 blocker · 3 warnings</p>
+      </div>
+      <p className="num text-[clamp(56px,5.4vw,92px)] font-semibold leading-[0.85] tracking-[-0.05em] text-lime">64</p>
+    </div>
+  );
+}
+
+const HERO_FINDINGS = [
+  { s: "Blocker", cls: "bg-red text-white", q: "fastest delivery in India", why: "No approved fact · Rule 4.2" },
+  { s: "Warning", cls: "bg-amber text-soot", q: "Quick-Kart", why: "Write it as QuickKart" },
+  { s: "Warning", cls: "bg-amber text-soot", q: "2 lakh", why: "Approved figure is 3.1 lakh · Fact F2" },
+];
+
+function FindingsFragment() {
+  return (
+    <div data-ui className="flex h-full flex-col justify-end gap-1 bg-lime p-[clamp(12px,1.2vw,18px)] text-soot">
+      {HERO_FINDINGS.map((f) => (
+        <div key={f.q} className="grid grid-cols-[auto_1fr] items-center gap-x-3 bg-white px-3 py-2">
+          <span className={cx("rounded-md px-2 py-0.5 text-[13px] font-medium", f.cls)}>{f.s}</span>
+          <span className="min-w-0">
+            <span className="block truncate text-[15px] font-medium">“{f.q}”</span>
+            <span className="block truncate text-[13px]">{f.why}</span>
+          </span>
+        </div>
+      ))}
     </div>
   );
 }
@@ -133,28 +141,27 @@ function Masthead() {
           </div>
         </header>
 
-        {/* desktop mosaic: 6 × 2, gutterless */}
-        <div className="hidden h-[52svh] min-h-[380px] grid-cols-6 grid-rows-2 lg:grid">
-          <div className="row-span-2 bg-lime" />
-          <Photo m={MEDIA.lacma} priority />
-          <Photo m={MEDIA.printing} className="col-span-2" priority />
-          <ScoreFragment />
-          <Photo m={MEDIA.proof} priority />
-          <Photo m={MEDIA.hatshepsut} className="bg-white" contain />
-          <SwingingPhoto />
-          <div className="col-span-2">
-            <MarkFragment />
+        {/* desktop band: one photograph, the rest is the product itself */}
+        <div className="hidden h-[54svh] min-h-[420px] grid-cols-6 grid-rows-2 pt-14 lg:grid">
+          <SwingingPhoto className="row-span-2" />
+          <div className="col-span-3 row-span-2">
+            <DraftFragment />
           </div>
-          <div className="bg-soot-2" />
-        </div>
-        {/* phone mosaic: 3 × 2 */}
-        <div className="grid h-[38svh] min-h-[260px] grid-cols-3 grid-rows-2 pt-14 lg:hidden">
-          <div className="bg-lime" />
-          <Photo m={MEDIA.lacma} priority />
-          <ScoreFragment />
-          <SwingingPhoto />
           <div className="col-span-2">
-            <MarkFragment />
+            <ScoreFragment />
+          </div>
+          <div className="col-span-2">
+            <FindingsFragment />
+          </div>
+        </div>
+        {/* phone band */}
+        <div className="grid h-[42svh] min-h-[300px] grid-cols-3 grid-rows-[1fr_auto] pt-14 lg:hidden">
+          <SwingingPhoto className="row-span-2" />
+          <div className="col-span-2">
+            <DraftFragment />
+          </div>
+          <div className="col-span-2 h-[96px]">
+            <ScoreFragment />
           </div>
         </div>
       </div>
@@ -196,10 +203,11 @@ function Board({ rows, ms }: { rows: BoardRow[]; ms: number }) {
   const drafts = new Set(rows.map((r) => r.draft)).size;
   return (
     <section id="board" className="on-soot bg-soot pb-10 text-white lg:pb-16">
-      <Reveal className="px-[var(--margin)] pb-12 pt-6 lg:pl-[var(--axis)] lg:pt-10">
-        <p className="max-w-[44ch] text-[20px] leading-[1.45] text-white lg:text-[24px]">
-          This is a real check. The engine read {drafts} QuickKart drafts while this page loaded and found {rows.length} things to fix, in{" "}
-          <span className="num">{ms}</span> ms. Pick any row.
+      <Reveal className="px-[var(--margin)] pb-12 pt-16 lg:pl-[var(--axis)] lg:pt-24">
+        <h2 className="display text-[11vw] lg:text-[clamp(44px,5.6vw,88px)]">A live check</h2>
+        <p className="mt-6 max-w-[48ch] text-[18px] leading-[1.5] text-white lg:text-[20px]">
+          The engine read {drafts} QuickKart drafts while this page loaded and found {rows.length} things to fix, in <span className="num">{ms}</span> ms. Pick any
+          row to see why.
         </p>
       </Reveal>
       <div className="relative overflow-hidden px-2 lg:px-3">
@@ -217,13 +225,13 @@ function Board({ rows, ms }: { rows: BoardRow[]; ms: number }) {
                       isOpen ? "h-[200px] content-center lg:h-[216px]" : "h-16 hover:bg-soot-3 lg:h-[72px]"
                     )}
                   >
-                    <span className={cx("truncate font-medium tracking-[-0.02em]", isOpen ? "text-[24px] lg:text-[40px]" : "text-[20px] lg:text-[28px]", "lg:col-span-5")}>
+                    <span className={cx("truncate font-medium tracking-[-0.02em]", isOpen ? "text-[24px] lg:text-[36px]" : "text-[19px] lg:text-[24px]", "lg:col-span-5")}>
                       “{r.quote}”
                     </span>
-                    <span className="hidden truncate text-[22px] lg:col-span-2 lg:block">{r.cite}</span>
-                    <span className="hidden truncate text-[22px] lg:col-span-2 lg:block">{r.pass}</span>
-                    <span className="hidden truncate text-[22px] lg:col-span-2 lg:block">{r.draft}</span>
-                    <span className={cx("justify-self-end whitespace-nowrap rounded-md px-2.5 py-1 text-[15px] font-medium lg:col-span-1 lg:text-[17px]", STATUS_BLOCK[r.severity])}>
+                    <span className={cx("hidden truncate text-[18px] lg:col-span-5 lg:block", isOpen ? "text-soot" : "text-ash-300")}>
+                      <span className={isOpen ? "font-medium" : "font-medium text-white"}>{r.cite}</span> · {r.title}
+                    </span>
+                    <span className={cx("justify-self-end whitespace-nowrap rounded-md px-2.5 py-1 text-[15px] font-medium lg:col-span-2 lg:text-[16px]", STATUS_BLOCK[r.severity])}>
                       {STATUS_WORD[r.severity]}
                     </span>
                     {isOpen && (
@@ -234,7 +242,7 @@ function Board({ rows, ms }: { rows: BoardRow[]; ms: number }) {
                         className="col-span-2 mt-3 grid max-w-[78ch] gap-1 text-[16px] leading-[1.45] lg:col-span-12 lg:text-[17px]"
                       >
                         <span>
-                          {r.message} <span className="lg:hidden">({r.cite} · {r.draft})</span>
+                          {r.message} ({r.cite}, {r.draft} draft, {r.pass.toLowerCase()})
                         </span>
                         <span className="font-medium">{r.fix ? `Suggested fix: ${r.fix}` : `Cites ${r.cite}: ${r.title}`}</span>
                       </motion.span>

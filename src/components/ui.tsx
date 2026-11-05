@@ -67,9 +67,9 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
 // ---------- labels and badges ----------
 
 export const SEVERITY: Record<Severity, { label: string; cls: string; dot: string }> = {
-  blocker: { label: "Blocker", cls: "bg-red-50 text-red-700 ring-red/25", dot: "bg-red" },
-  warning: { label: "Warning", cls: "bg-amber-50 text-amber-700 ring-amber/25", dot: "bg-amber" },
-  suggestion: { label: "Suggestion", cls: "bg-ash-100 text-ash-700 ring-ash-300/60", dot: "bg-ash-500" },
+  blocker: { label: "Blocker", cls: "bg-red text-white ring-red", dot: "bg-white" },
+  warning: { label: "Warning", cls: "bg-amber-50 text-amber-700 ring-amber", dot: "bg-amber" },
+  suggestion: { label: "Suggestion", cls: "bg-white text-ash-700 ring-ash-400", dot: "bg-ash-500" },
 };
 
 export const ISSUE: Record<IssueType, string> = {
@@ -189,7 +189,7 @@ export function Logo({ className, tone = "ink" }: { className?: string; tone?: "
 }
 
 export function Card({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cx("rounded-lg bg-white", className)}>{children}</div>;
+  return <div className={cx("rounded-lg bg-white ring-1 ring-line", className)}>{children}</div>;
 }
 
 export function Field({ label, hint, children, htmlFor }: { label: string; hint?: string; children: ReactNode; htmlFor?: string }) {

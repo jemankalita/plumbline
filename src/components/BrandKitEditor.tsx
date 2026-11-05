@@ -91,18 +91,18 @@ export function BrandKitEditor({ kit, canEdit, aiOn, today }: { kit: BrandKit; c
         </p>
       )}
 
-      <div className="flex gap-1 overflow-x-auto rounded-xl bg-ash-100/60 p-1 text-sm sm:w-fit" role="tablist">
+      <div className="flex gap-1 overflow-x-auto rounded-lg bg-white p-1 ring-1 ring-line text-sm sm:w-fit" role="tablist">
         {TABS.map((t) => (
           <button
             key={t.id}
             role="tab"
             aria-selected={tab === t.id}
             onClick={() => setTab(t.id)}
-            className={cx("relative shrink-0 rounded-lg px-3 py-1.5 transition-colors", tab === t.id ? "font-medium text-ink" : "text-muted hover:text-ink")}
+            className={cx("relative shrink-0 rounded-lg px-3 py-1.5 transition-colors", tab === t.id ? "font-medium text-white" : "text-ink hover:bg-ash-50")}
           >
-            {tab === t.id && <motion.span layoutId="kit-tab" className="absolute inset-0 rounded-lg bg-white" transition={{ type: "spring", stiffness: 500, damping: 40 }} />}
+            {tab === t.id && <motion.span layoutId="kit-tab" className="absolute inset-0 rounded-md bg-soot" transition={{ type: "spring", stiffness: 500, damping: 40 }} />}
             <span className="relative">
-              {t.label} {t.n != null && <span className="num text-ash-600">{t.n}</span>}
+              {t.label} {t.n != null && <span className="num opacity-70">{t.n}</span>}
             </span>
           </button>
         ))}

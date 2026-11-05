@@ -23,7 +23,7 @@ export function QueueList({ items }: { items: SubmissionSummary[] }) {
             <ScoreRing score={s.score} size={52} stroke={5} />
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                <h2 className="truncate font-medium text-ink">{s.title}</h2>
+                <h2 className="truncate text-[17px] font-semibold text-ink">{s.title}</h2>
                 <StatusPill s={s.status} />
                 {s.aiAssisted && (
                   <Pill className="bg-white text-muted ring-line">

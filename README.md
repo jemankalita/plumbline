@@ -92,8 +92,7 @@ CI (GitHub Actions) runs typecheck, tests and a production build on every push.
 
 ## Picture credits
 
-The landing page uses museum and archive photographs of plumb bobs and printing, all under open licences. Each one is credited, with links, in the page footer:
-LACMA plumb bob (public domain); "Plumb bob with string" by Salil Kumar Mukherjee (CC BY-SA 4.0); "The Invention of Book Printing" by Stradanus, Cooper Hewitt (CC0); Kinney Bros. printing proof, 1889, The Met (CC0); Plumb bob with the name of Hatshepsut, The Met (CC0); "Roman plumb bob" by Gaius Cornelius (CC BY-SA 4.0); ceremonial plumb-bob, Fitzwilliam Museum, by SpeakingArch (CC BY-SA 4.0); plumb bob by the Portable Antiquities Scheme (CC BY 2.0).
+The landing page uses one photograph: "Plumb bob with string" by Salil Kumar Mukherjee, CC BY-SA 4.0, via Wikimedia Commons. It is credited with links in the page footer. Every other visual is the product's own interface.
 
 ## Disclosure
 
