@@ -72,7 +72,7 @@ export function FindingCard({
         )}
       </header>
 
-      <p className="mt-3 font-display text-[19px] leading-snug text-ink">
+      <p className="mt-3 text-[15px] font-medium leading-snug text-ink">
         {f.start >= 0 ? <>“{f.quote}”</> : <span className="text-[17px]">Image · {f.quote}</span>}
       </p>
       <p className="mt-1.5 text-[15px] leading-relaxed text-ink">{f.message}</p>

@@ -37,7 +37,7 @@ export default async function QueuePage(props: { searchParams: Promise<{ view?: 
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="kicker">Workspace · QuickKart (demo brand)</p>
-          <h1 className="mt-1 font-display text-[40px] leading-none tracking-tight text-ink sm:text-5xl">Review queue</h1>
+          <h1 className="mt-1 text-[30px] font-semibold leading-tight tracking-[-0.03em] text-ink">Review queue</h1>
           <p className="mt-2 max-w-xl text-[15px] text-muted">Every draft is checked against the Brand Kit before a person sees it. {hint}</p>
         </div>
         <Link
@@ -52,7 +52,7 @@ export default async function QueuePage(props: { searchParams: Promise<{ view?: 
         {tiles.map((t) => (
           <div key={t.label} className="rounded-2xl border border-line bg-white px-4 py-3.5">
             <dt className="text-[13px] text-muted">{t.label}</dt>
-            <dd className={`num mt-1 font-display text-4xl leading-none ${t.hot && t.value ? "text-red" : "text-ink"}`}>{t.value}</dd>
+            <dd className={`num mt-1 text-[30px] font-semibold leading-none tracking-[-0.02em] ${t.hot && t.value ? "text-red" : "text-ink"}`}>{t.value}</dd>
           </div>
         ))}
       </dl>
@@ -77,7 +77,7 @@ export default async function QueuePage(props: { searchParams: Promise<{ view?: 
         ) : (
           <div className="grid place-items-center gap-3 rounded-2xl border border-dashed border-ash-300 bg-white/60 px-6 py-16 text-center">
             <Sparkles className="size-6 text-ash-500" />
-            <p className="font-display text-2xl text-ink">Nothing in the queue yet</p>
+            <p className="text-lg font-semibold text-ink">Nothing in the queue yet</p>
             <Link href="/new" className="inline-flex items-center gap-1 text-sm font-medium text-ash-600 hover:underline">
               Check your first draft <ArrowRight className="size-4" />
             </Link>

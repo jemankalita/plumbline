@@ -23,7 +23,7 @@ export default async function InsightsPage() {
     <div className="grid gap-8">
       <div>
         <p className="kicker">Learning loop</p>
-        <h1 className="mt-1 font-display text-[40px] leading-none tracking-tight text-ink sm:text-5xl">Insights</h1>
+        <h1 className="mt-1 text-[30px] font-semibold leading-tight tracking-[-0.03em] text-ink">Insights</h1>
         <p className="mt-2 max-w-2xl text-[15px] text-muted">
           What keeps going wrong, and which rules people keep overriding. When a rule is overridden again and again, the rule is probably unclear, not the writers.
         </p>
@@ -40,7 +40,7 @@ export default async function InsightsPage() {
         ].map(([l, v]) => (
           <div key={l} className="rounded-2xl border border-line bg-white px-4 py-3.5">
             <dt className="text-[13px] text-muted">{l}</dt>
-            <dd className="num mt-1 font-display text-4xl leading-none text-ink">{v}</dd>
+            <dd className="num mt-1 text-[30px] font-semibold leading-none tracking-[-0.02em] text-ink">{v}</dd>
           </div>
         ))}
       </dl>
@@ -59,13 +59,13 @@ export default async function InsightsPage() {
               <div key={g.id} className="grid gap-4 md:grid-cols-[1fr_auto] md:items-center">
                 <div>
                   <p className="num text-[13px] text-ash-700">{g.label} · possibly unclear</p>
-                  <p className="mt-1 font-display text-[26px] leading-tight text-ink">{g.title}</p>
+                  <p className="mt-1 text-lg font-semibold leading-snug text-ink">{g.title}</p>
                   <p className="mt-1 text-sm text-ink">
                     Overridden or dismissed <b className="num font-medium text-ink">{g.overridden}</b> of <b className="num font-medium text-ink">{g.decided}</b> times. Reasons given:
                   </p>
                   <ul className="mt-2 grid gap-1">
                     {g.reasons.map((r, i) => (
-                      <li key={i} className="font-display text-[17px] italic text-ink">
+                      <li key={i} className="text-sm text-ink">
                         “{r}”
                       </li>
                     ))}
@@ -81,7 +81,7 @@ export default async function InsightsPage() {
                       <circle cx="18" cy="18" r="15.5" fill="none" stroke="var(--color-ash-100)" strokeWidth="3" />
                       <circle cx="18" cy="18" r="15.5" fill="none" stroke="var(--color-red)" strokeWidth="3" strokeLinecap="round" strokeDasharray={`${g.rate * 97.4} 97.4`} />
                     </svg>
-                    <span className="num font-display text-[24px] text-red">{Math.round(g.rate * 100)}%</span>
+                    <span className="num text-xl font-semibold text-red">{Math.round(g.rate * 100)}%</span>
                   </div>
                   <Link href="/kit" className="inline-flex items-center gap-1 text-sm font-medium text-ash-700 hover:underline">
                     Rewrite in Brand Kit <ArrowRight className="size-4" />
@@ -118,7 +118,7 @@ export default async function InsightsPage() {
             {d.aiVsHuman.map((g) => (
               <div key={g.group} className="rounded-xl bg-ash-50 p-4">
                 <p className="text-[13px] text-muted">{g.group}</p>
-                <p className="num mt-1 font-display text-4xl leading-none text-ink">{g.avgFindings}</p>
+                <p className="num mt-1 text-[30px] font-semibold leading-none tracking-[-0.02em] text-ink">{g.avgFindings}</p>
                 <p className="text-[13px] text-muted">findings per draft</p>
                 <p className="num mt-2 text-[13px] text-ink">
                   {g.claimIssues} claim issue{g.claimIssues === 1 ? "" : "s"} · {g.drafts} draft{g.drafts === 1 ? "" : "s"}

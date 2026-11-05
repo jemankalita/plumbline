@@ -33,11 +33,16 @@ export function DraftView({
   findings,
   activeId,
   onSelect,
+  className = "text-[19px] sm:text-[20px]",
+  fixesOnly = false,
 }: {
   text: string;
   findings: FindingRow[];
   activeId: string | null;
   onSelect: (id: string) => void;
+  className?: string;
+  /** Show accepted fixes as the finished sentence, without the struck-out original. */
+  fixesOnly?: boolean;
 }) {
   const parts: ReactNode[] = [];
   let cursor = 0;
@@ -49,8 +54,8 @@ export function DraftView({
     if (f.status === "accepted" && f.fix != null) {
       parts.push(
         <span key={f.id} className={cx("hl hl-done", active && "hl-active")} onClick={() => onSelect(f.id)}>
-          <del className="text-muted decoration-red/50">{quote}</del>
-          {f.fix && <ins className="ml-0.5 text-green-700 no-underline">{f.fix}</ins>}
+          {!fixesOnly && <del className="mr-1 text-muted decoration-red/50">{quote}</del>}
+          {f.fix && <ins className="text-green-700 no-underline">{f.fix}</ins>}
         </span>
       );
     } else {
@@ -80,5 +85,5 @@ export function DraftView({
     cursor = f.end;
   }
   if (cursor < text.length) parts.push(text.slice(cursor));
-  return <div className="whitespace-pre-wrap font-display text-[22px] leading-[1.6] text-ink sm:text-[24px]">{parts}</div>;
+  return <div className={cx("whitespace-pre-wrap leading-[1.6] text-ink", className)}>{parts}</div>;
 }

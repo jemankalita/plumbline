@@ -90,10 +90,6 @@ CI (GitHub Actions) runs typecheck, tests and a production build on every push.
 | Insights + Guideline Gap Finder | ⏳ early version built; fuller version in Round 3 |
 | Logo / layout checks on full designs, learning from reviewer decisions, real auth (Supabase Auth) | Round 3 |
 
-## Picture credits
-
-The landing page uses one photograph: "Plumb bob with string" by Salil Kumar Mukherjee, CC BY-SA 4.0, via Wikimedia Commons. It is credited with links in the page footer. Every other visual is the product's own interface.
-
 ## Disclosure
 
 AI coding assistance was used during development. In the product, Google Gemini is used only for the judgement pass, alt-text drafts and guideline import, and each use is shown in the UI.

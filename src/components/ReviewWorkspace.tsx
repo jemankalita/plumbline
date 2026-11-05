@@ -140,7 +140,7 @@ export function ReviewWorkspace({ detail, palette, role }: { detail: SubmissionD
           <Link href="/queue" className="inline-flex items-center gap-1 text-sm text-muted hover:text-ink">
             <ArrowLeft className="size-4" /> Queue
           </Link>
-          <h1 className="mt-2 font-display text-[34px] leading-[1.05] tracking-tight text-ink sm:text-[42px]">{sub.title}</h1>
+          <h1 className="mt-2 text-[30px] font-semibold leading-tight tracking-[-0.03em] text-ink">{sub.title}</h1>
           <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted">
             <StatusPill s={sub.status} />
             <span>{sub.channel}</span>
@@ -244,7 +244,7 @@ export function ReviewWorkspace({ detail, palette, role }: { detail: SubmissionD
                   rows={8}
                   autoFocus
                   aria-label="Draft text"
-                  className="w-full resize-y bg-transparent font-display text-[22px] leading-[1.6] text-ink outline-none"
+                  className="w-full resize-y bg-transparent text-[18px] leading-[1.7] text-ink outline-none"
                 />
               ) : prev ? (
                 <DiffView before={prev.text} after={rev.text} />
@@ -286,7 +286,7 @@ export function ReviewWorkspace({ detail, palette, role }: { detail: SubmissionD
               <ul className="mt-2 grid gap-1.5">
                 {rev.claims.map((c, i) => (
                   <li key={i} className="flex items-center justify-between gap-3 text-sm">
-                    <span className="truncate font-display text-[17px] text-ink">“{c.quote}”</span>
+                    <span className="truncate text-sm font-medium text-ink">“{c.quote}”</span>
                     <Pill className={cx("shrink-0 ring-transparent", CLAIM[c.status].cls)}>
                       {CLAIM[c.status].label}
                       {c.factId ? ` · ${c.factId}` : ""}
@@ -332,7 +332,7 @@ export function ReviewWorkspace({ detail, palette, role }: { detail: SubmissionD
           {listed.length === 0 ? (
             <Card className="grid place-items-center gap-2 px-6 py-12 text-center">
               <CheckCircle2 className="size-8 text-green" />
-              <p className="font-display text-2xl text-ink">{filter === "open" ? "Nothing open" : "Nothing here"}</p>
+              <p className="text-lg font-semibold text-ink">{filter === "open" ? "Nothing open" : "Nothing here"}</p>
               <p className="max-w-xs text-sm text-muted">
                 {filter === "open" ? "Every finding on this version has been decided." : "No findings of this kind on this version."}
               </p>
@@ -473,7 +473,7 @@ function WorkflowBar(props: {
 function DiffView({ before, after }: { before: string; after: string }) {
   const parts = diffWords(before, after);
   return (
-    <div className="whitespace-pre-wrap font-display text-[22px] leading-[1.6] text-ink">
+    <div className="whitespace-pre-wrap text-[18px] leading-[1.7] text-ink">
       {parts.map((p, i) =>
         p.added ? (
           <ins key={i} className="rounded bg-green-50 px-0.5 text-green-700 no-underline">

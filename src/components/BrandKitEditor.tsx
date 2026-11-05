@@ -73,7 +73,7 @@ export function BrandKitEditor({ kit, canEdit, aiOn, today }: { kit: BrandKit; c
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="kicker">Source of truth</p>
-          <h1 className="mt-1 font-display text-[40px] leading-none tracking-tight text-ink sm:text-5xl">{kit.name} Brand Kit</h1>
+          <h1 className="mt-1 text-[30px] font-semibold leading-tight tracking-[-0.03em] text-ink">{kit.name} Brand Kit</h1>
           <p className="mt-2 max-w-2xl text-[15px] text-muted">
             Every finding must cite one of these records. Change a rule here and the next check uses it straight away.
           </p>
@@ -148,7 +148,7 @@ export function BrandKitEditor({ kit, canEdit, aiOn, today }: { kit: BrandKit; c
               {kit.terms.map((t) => (
                 <Row key={t.id} canEdit={canEdit} busy={busy === t.id} onEdit={() => setEditing({ kind: "terms", item: t })} onDelete={() => remove("terms", t.id)}>
                   <div className="min-w-0 flex-1">
-                    <p className="font-display text-[22px] leading-tight text-ink">{t.preferred}</p>
+                    <p className="text-base font-semibold leading-snug text-ink">{t.preferred}</p>
                     <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[13px]">
                       <span className="text-muted">Not:</span>
                       {t.banned.map((b) => (
@@ -172,7 +172,7 @@ export function BrandKitEditor({ kit, canEdit, aiOn, today }: { kit: BrandKit; c
                   <Row key={f.id} canEdit={canEdit} busy={busy === f.id} onEdit={() => setEditing({ kind: "facts", item: f })} onDelete={() => remove("facts", f.id)}>
                     <span className="num w-10 shrink-0 num text-[13px] text-ash-600">{f.id}</span>
                     <div className="min-w-0 flex-1">
-                      <p className="font-display text-[20px] leading-snug text-ink">“{f.statement}”</p>
+                      <p className="text-[15px] font-medium leading-snug text-ink">“{f.statement}”</p>
                       <p className="mt-1 text-sm text-muted">
                         {f.source} · owner: {f.owner}
                         {f.value != null && <span className="num"> · value {f.value.toLocaleString("en-IN")}</span>}
@@ -216,7 +216,7 @@ function Stat({ n, label, hot }: { n: number; label: string; hot?: boolean }) {
   return (
     <div>
       <dt className="sr-only">{label}</dt>
-      <dd className={cx("num font-display text-3xl leading-none", hot ? "text-red" : "text-ink")}>{n}</dd>
+      <dd className={cx("num text-2xl font-semibold leading-none tracking-[-0.02em]", hot ? "text-red" : "text-ink")}>{n}</dd>
       <span className="text-[13px] text-muted">{label}</span>
     </div>
   );
@@ -351,7 +351,7 @@ function EditorModal({
         className="relative grid max-h-[90vh] w-full max-w-lg gap-4 overflow-y-auto rounded-2xl border border-line bg-white p-5 shadow-lift"
       >
         <div className="flex items-center justify-between">
-          <h2 className="font-display text-2xl text-ink">
+          <h2 className="text-lg font-semibold text-ink">
             {editing.item.id ? "Edit" : "New"} {title}
           </h2>
           <button type="button" onClick={onClose} className="grid size-8 place-items-center rounded-lg hover:bg-ash-50" aria-label="Close">
@@ -513,7 +513,7 @@ function VoicePalette({ kit, canEdit }: { kit: BrandKit; canEdit: boolean }) {
           value={voice}
           disabled={!canEdit}
           onChange={(e) => setVoice(e.target.value)}
-          className={cx(inputCls, "font-display text-[19px] leading-relaxed disabled:bg-ash-25")}
+          className={cx(inputCls, "text-base leading-relaxed disabled:bg-ash-25")}
         />
         <p className="text-[13px] text-muted">The AI judgement pass reads this, so tone is judged against your voice, not some generic idea of “correct” English.</p>
       </Card>
@@ -680,7 +680,7 @@ function Importer({ canEdit, aiOn, onDone }: { canEdit: boolean; aiOn: boolean; 
       {proposal && (
         <Card className="grid gap-4 p-5">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="font-display text-2xl text-ink">Proposed additions</p>
+            <p className="text-lg font-semibold text-ink">Proposed additions</p>
             <span className="text-[13px] text-muted">via {proposal.provider}. Untick anything you don&apos;t want.</span>
           </div>
           {proposal.voice && <Proposed id="voice" skip={skip} toggle={toggle} title="Voice" body={proposal.voice} />}

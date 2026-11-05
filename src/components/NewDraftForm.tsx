@@ -177,7 +177,7 @@ export function NewDraftForm({ canSubmit, role }: { canSubmit: boolean; role: Ro
             maxLength={20000}
             aria-label="Draft content"
             placeholder="Paste a caption, email, ad or web copy… or drop a file here."
-            className="block min-h-[260px] w-full resize-y bg-transparent px-5 py-4 font-display text-[22px] leading-[1.55] text-ink outline-none placeholder:text-muted/50"
+            className="block min-h-[260px] w-full resize-y bg-transparent px-5 py-4 text-[18px] leading-[1.6] text-ink outline-none placeholder:text-muted/50"
           />
           {dragging && (
             <div className="pointer-events-none absolute inset-2 grid place-items-center rounded-xl border-2 border-dashed border-ash-400 bg-ash-50/80 text-sm font-medium text-ash-700">

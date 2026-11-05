@@ -5,7 +5,7 @@ import { useState } from "react";
 import type { FindingRow, ReviewResult } from "@/lib/types";
 import { DraftView } from "../DraftView";
 import { api, Button, cx, ErrorNote, Logo, ScoreRing, SeverityBadge } from "../ui";
-import { CREDITS, type KitColumn } from "./data";
+import type { KitColumn } from "./data";
 import { Reveal } from "./Landing";
 
 // ---------- one finding, shown whole like a plate in a manual ----------
@@ -56,7 +56,7 @@ export function Panel() {
   );
 
   return (
-    <section className="bg-ash-50 px-[var(--margin)] py-[clamp(96px,12vw,200px)] text-soot">
+    <section className="bg-ash-50 px-[var(--margin)] py-[clamp(72px,8vw,128px)] text-soot">
       <div className="grid gap-10 lg:grid-cols-[1fr_400px_1fr] lg:gap-12">
         <div className="relative lg:h-[720px]">
           <Reveal>
@@ -68,7 +68,7 @@ export function Panel() {
         <Reveal className="relative">
           <div data-ui className="relative mx-auto h-[700px] w-full max-w-[400px] bg-white text-[15px] text-soot">
             <div className="absolute inset-x-0 top-0 flex h-14 items-center justify-between bg-soot px-5 text-white">
-              <span className="font-medium">Finding 1 of 6</span>
+              <span className="font-medium">Finding 1</span>
               <SeverityBadge s="blocker" />
             </div>
             <PanelPart part="quote" active={active} className="top-[80px] py-4">
@@ -155,18 +155,18 @@ export function Playground({ aiOn }: { aiOn: boolean }) {
   const rows = (res?.findings ?? []).map((f) => ({ ...f, revisionId: "try", submissionId: "try" })) as FindingRow[];
 
   return (
-    <section id="try" className="bg-lime px-[var(--margin)] py-[clamp(80px,10vw,160px)] text-soot">
-      <div className="lg:grid lg:grid-cols-[calc(var(--axis)-var(--margin))_1fr]">
-        <Reveal className="lg:col-start-2">
-          <h2 className="display text-[11vw] lg:text-[clamp(48px,6vw,96px)]">Paste a caption</h2>
-          <p className="mt-6 max-w-[46ch] text-[18px] leading-[1.5]">
+    <section id="try" className="scroll-mt-4 bg-lime px-[var(--margin)] py-[clamp(72px,8vw,128px)] text-soot">
+      <div>
+        <Reveal>
+          <h2 className="display text-[36px] lg:text-[clamp(40px,4.4vw,64px)]">Paste a caption</h2>
+          <p className="mt-4 max-w-[56ch] text-[17px] leading-[1.55] lg:text-[18px]">
             It is checked against the demo QuickKart Brand Kit by the same engine the workspace uses. Nothing is saved.{" "}
             {aiOn ? "AI judgement is on for tone and messaging." : "AI judgement is off on this server, so only the rule and claim passes run."}
           </p>
         </Reveal>
       </div>
 
-      <div className="mt-14 grid items-start gap-1.5 lg:grid-cols-2">
+      <div className="mt-10 grid items-start gap-1.5 lg:grid-cols-2">
         <Reveal i={1}>
           <div data-ui className="bg-white">
             <textarea
@@ -175,7 +175,7 @@ export function Playground({ aiOn }: { aiOn: boolean }) {
               rows={6}
               maxLength={5000}
               aria-label="Text to check"
-              className="block w-full resize-y bg-white px-5 py-5 text-[22px] leading-[1.5] tracking-[-0.01em] text-soot outline-none"
+              className="block w-full resize-y bg-white px-5 py-5 text-[18px] leading-[1.55] text-soot outline-none"
             />
             <div className="flex flex-wrap items-center gap-2 bg-ash-50 px-4 py-3">
               {TRY.map((t, i) => (
@@ -202,7 +202,7 @@ export function Playground({ aiOn }: { aiOn: boolean }) {
             <ErrorNote error={error} />
             {!res && !busy && !error && (
               <div className="grid min-h-[280px] content-center">
-                <p className="text-[26px] font-semibold leading-tight tracking-[-0.03em]">The marks appear here.</p>
+                <p className="text-[20px] font-semibold leading-tight tracking-[-0.02em]">The marks appear here.</p>
                 <p className="mt-2 max-w-[36ch] text-[16px] text-muted">Each one with the rule it cites and a fix. Example 1 breaks several rules in one line.</p>
               </div>
             )}
@@ -223,7 +223,7 @@ export function Playground({ aiOn }: { aiOn: boolean }) {
                   </p>
                 </div>
                 <div className="bg-ash-50 p-4 text-[18px] leading-[1.6]">
-                  <DraftView text={checked} findings={rows} activeId={active} onSelect={setActive} />
+                  <DraftView text={checked} findings={rows} activeId={active} onSelect={setActive} className="text-[17px]" />
                 </div>
                 <ul className="grid gap-1">
                   {rows.map((f) => (
@@ -262,13 +262,13 @@ export function Playground({ aiOn }: { aiOn: boolean }) {
 
 export function Names({ columns }: { columns: KitColumn[] }) {
   return (
-    <section className="bg-white px-[var(--margin)] py-[120px] text-soot">
+    <section className="bg-white px-[var(--margin)] py-[clamp(72px,8vw,128px)] text-soot">
       <div className="grid gap-10 lg:grid-cols-12 lg:gap-8">
         <Reveal className="lg:col-span-3">
           <h2 className="text-[26px] font-semibold leading-[1.1] tracking-[-0.03em] lg:text-[32px]">What it holds you to</h2>
           <p className="mt-4 max-w-[30ch] text-[16px] leading-[1.5] text-muted">The demo QuickKart Brand Kit. Yours is imported from your own guideline PDF.</p>
         </Reveal>
-        <Reveal i={1} className="grid grid-cols-2 gap-x-5 gap-y-8 text-[17px] leading-[1.5] lg:col-span-8 lg:col-start-5 lg:grid-cols-4 lg:gap-x-8 lg:text-[19px]">
+        <Reveal i={1} className="grid grid-cols-2 gap-x-5 gap-y-8 text-[15px] leading-[1.5] lg:col-span-8 lg:col-start-5 lg:grid-cols-4 lg:gap-x-8 lg:text-[16px]">
           {columns.map((c) => (
             <div key={c.kind}>
               <p className="text-muted">{c.kind}</p>
@@ -283,20 +283,22 @@ export function Names({ columns }: { columns: KitColumn[] }) {
   );
 }
 
-// ---------- close: three photographs, a field, then the footer ----------
+// ---------- close ----------
 
 export function Closing() {
   return (
     <>
-      <section className="flex min-h-[44svh] flex-col justify-center bg-ash-50 px-[var(--margin)] py-20 text-soot">
-        <Reveal className="lg:max-w-[58%]">
-          <p className="text-[22px] leading-[1.3] tracking-[-0.02em] lg:text-[30px]">
-            Masons have checked walls with a weight on a string for four thousand years. Give your drafts the same test:{" "}
-            <Link href="/queue" className="under-link decoration-lime">open the review queue</Link>.
-          </p>
-          <p className="mt-8 max-w-[52ch] text-[16px] leading-[1.5] text-muted">
-            The workspace is a working demo. Switch between Creator, Reviewer, Approver and Admin from the top bar; each role can do only what the role matrix allows.
-          </p>
+      <section className="bg-ash-50 px-[var(--margin)] py-[clamp(72px,8vw,128px)] text-soot">
+        <Reveal className="flex flex-col items-start justify-between gap-8 lg:flex-row lg:items-end">
+          <div>
+            <h2 className="display text-[36px] lg:text-[clamp(40px,4.4vw,64px)]">See the whole review flow</h2>
+            <p className="mt-4 max-w-[56ch] text-[17px] leading-[1.55] text-muted lg:text-[18px]">
+              The workspace is a working demo. Switch between Creator, Reviewer, Approver and Admin from the top bar; each role can do only what the role matrix allows.
+            </p>
+          </div>
+          <Link href="/queue" className="lift inline-flex h-11 shrink-0 items-center rounded-lg bg-soot px-5 text-[15px] font-medium text-white hover:bg-soot-3">
+            Open the workspace
+          </Link>
         </Reveal>
       </section>
       <Footer />
@@ -306,46 +308,18 @@ export function Closing() {
 
 function Footer() {
   return (
-    <footer className="on-soot flex min-h-[90svh] flex-col bg-soot px-[var(--margin)] pb-8 pt-10 text-white">
-      <div className="flex flex-wrap items-start gap-x-10 gap-y-4 text-[15px] text-ash-300">
-        <Logo tone="paper" />
-        <p className="max-w-[34ch]">Built by Team Diet Code: Jeman Kalita (VIT Vellore) and Krishnesha Sarma (SRM KTR).</p>
-        <p className="max-w-[34ch]">Problem statement by Inkloom AI. QuickKart is a fictional brand.</p>
-        <button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} className="ml-auto text-white underline underline-offset-4 hover:text-lime">
-          Back to top
-        </button>
-      </div>
-
-      <div className="mt-auto pt-24">
-        <a href="https://github.com/jemankalita/plumbline" className="display block text-[11vw] text-white transition-colors hover:text-lime lg:text-[8.2vw]">
-          github.com/
-          <br />
-          jemankalita/plumbline
-        </a>
-        <p className="mt-10 max-w-[120ch] text-[14px] leading-[1.6] text-ash-300">
-          Pictures:{" "}
-          {CREDITS.map((c, i) => (
-            <span key={c.page}>
-              <a href={c.page} className="text-white underline underline-offset-2 hover:text-lime">
-                {c.title}
-              </a>
-              {c.by ? ` by ${c.by}` : ""},{" "}
-              <a href={c.licenceUrl} className="underline underline-offset-2 hover:text-lime">
-                {c.licence}
-              </a>
-              {i < CREDITS.length - 1 ? "; " : "."}
-            </span>
-          ))}
-        </p>
-        <div className="mt-6 grid gap-1 text-[14px] text-ash-300 lg:grid-cols-3">
-          <p className="flex gap-4">
-            <Link href="/queue" className="hover:text-lime">Workspace</Link>
-            <Link href="/kit" className="hover:text-lime">Brand Kit</Link>
-            <Link href="/insights" className="hover:text-lime">Insights</Link>
-          </p>
-          <p className="lg:text-center">AI coding assistance was used to build this. Gemini runs only where the UI says so.</p>
-          <p className="lg:text-right">India, 2026</p>
+    <footer className="on-soot bg-soot px-[var(--margin)] py-10 text-[14px] leading-[1.55] text-ash-300">
+      <div className="flex flex-wrap items-start justify-between gap-x-12 gap-y-6">
+        <div className="grid max-w-[64ch] gap-3">
+          <Logo tone="paper" />
+          <p>Built by Team Diet Code: Jeman Kalita (VIT Vellore) and Krishnesha Sarma (SRM KTR). Problem statement by Inkloom AI. QuickKart is a fictional brand.</p>
         </div>
+        <nav className="flex flex-wrap gap-x-6 gap-y-2" aria-label="Footer">
+          <Link href="/queue" className="hover:text-white">Workspace</Link>
+          <Link href="/kit" className="hover:text-white">Brand Kit</Link>
+          <Link href="/insights" className="hover:text-white">Insights</Link>
+          <a href="https://github.com/jemankalita/plumbline" className="hover:text-white">Source</a>
+        </nav>
       </div>
     </footer>
   );

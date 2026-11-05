@@ -21,7 +21,7 @@ export default async function AuditPage() {
     <div className="grid gap-6">
       <div>
         <p className="kicker">Accountability</p>
-        <h1 className="mt-1 font-display text-[40px] leading-none tracking-tight text-ink sm:text-5xl">Audit log</h1>
+        <h1 className="mt-1 text-[30px] font-semibold leading-tight tracking-[-0.03em] text-ink">Audit log</h1>
         <p className="mt-2 max-w-2xl text-[15px] text-muted">Every check, decision, override and Brand Kit change, newest first. Append-only: nothing here can be edited from the app.</p>
       </div>
       <div className="overflow-hidden rounded-2xl border border-line bg-white">

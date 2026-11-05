@@ -78,8 +78,11 @@ body {
   font-optical-sizing: auto;
 }
 
-h1, h2, h3 { text-wrap: balance; }
-p, li { text-wrap: pretty; }
+/* In the base layer so utilities such as truncate can still override them. */
+@layer base {
+  h1, h2, h3 { text-wrap: balance; }
+  p, li { text-wrap: pretty; }
+}
 
 ::selection { background: var(--color-lime); color: var(--color-soot); }
 
@@ -120,8 +123,8 @@ p, li { text-wrap: pretty; }
 .display {
   font-family: var(--font-display);
   font-weight: 600;
-  letter-spacing: -0.045em;
-  line-height: 0.92;
+  letter-spacing: -0.035em;
+  line-height: 1;
 }
 
 /* masked line reveal: each headline line rises from behind its own baseline */
