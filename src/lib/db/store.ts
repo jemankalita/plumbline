@@ -30,31 +30,49 @@ const CITE_COLUMN: Partial<Record<TableName, string>> = { rules: "ruleId", terms
 
 type Db = Record<TableName, Row[]>;
 
+type FileState = { db: Db | null; writing: Promise<void> };
+
+// Next bundles route handlers and pages separately, so this module is evaluated more than
+// once per server process. The cached data must live on globalThis: with a module-level
+// copy, a page keeps reading stale data and the bundles overwrite each other on disk.
+const FILE_STATE = Symbol.for("plumbline.fileStore");
+
+function fileState(file: string): FileState {
+  const registry = globalThis as unknown as Record<symbol, Map<string, FileState> | undefined>;
+  const states = (registry[FILE_STATE] ??= new Map<string, FileState>());
+  const existing = states.get(file);
+  if (existing) return existing;
+  const created: FileState = { db: null, writing: Promise.resolve() };
+  states.set(file, created);
+  return created;
+}
+
 function fileStore(): Store {
   const file =
     process.env.PLUMBLINE_DATA_FILE ??
     (process.env.VERCEL ? "/tmp/plumbline.json" : path.join(process.cwd(), ".data", "plumbline.json"));
-  let db: Db | null = null;
-  let writing: Promise<void> = Promise.resolve();
+  const state = fileState(file);
 
   async function load(): Promise<Db> {
-    if (db) return db;
+    if (state.db) return state.db;
+    let loaded: Db;
     try {
-      db = JSON.parse(await fs.readFile(file, "utf8")) as Db;
+      loaded = JSON.parse(await fs.readFile(file, "utf8")) as Db;
     } catch {
-      db = Object.fromEntries(TABLES.map((t) => [t, []])) as unknown as Db;
+      loaded = Object.fromEntries(TABLES.map((t) => [t, []])) as unknown as Db;
     }
-    for (const t of TABLES) db[t] ??= [];
-    return db;
+    for (const t of TABLES) loaded[t] ??= [];
+    state.db ??= loaded; // two first reads can overlap: keep whichever landed first
+    return state.db;
   }
 
   function persist(): Promise<void> {
-    const snapshot = JSON.stringify(db);
-    writing = writing
+    const snapshot = JSON.stringify(state.db);
+    state.writing = state.writing
       .then(() => fs.mkdir(path.dirname(file), { recursive: true }))
       .then(() => fs.writeFile(file, snapshot, "utf8"))
       .catch((e) => console.error("[plumbline] could not write data file", e));
-    return writing;
+    return state.writing;
   }
 
   const matches = (row: Row, where?: Where) => !where || Object.entries(where).every(([k, v]) => row[k] === v);

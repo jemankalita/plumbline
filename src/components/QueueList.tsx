@@ -37,7 +37,7 @@ export function QueueList({ items }: { items: SubmissionSummary[] }) {
                 <span aria-hidden>·</span>
                 <span>v{s.version}</span>
                 <span aria-hidden>·</span>
-                <span>{timeAgo(s.updatedAt)}</span>
+                <span suppressHydrationWarning>{timeAgo(s.updatedAt)}</span>
                 <span className="flex items-center gap-2.5 sm:ml-2">
                   <Count n={s.blockers} cls="bg-red" label="blockers" />
                   <Count n={s.warnings} cls="bg-amber" label="warnings" />

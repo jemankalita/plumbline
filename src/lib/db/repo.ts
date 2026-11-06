@@ -19,13 +19,14 @@ import type {
   SubmissionStatus,
   Term,
 } from "../types";
-import { DEMO_KIT, DEMO_SUBMISSIONS } from "./seed";
+import { DIWALI_IMAGE } from "./demo-image-data";
+import { DEMO_KIT, DEMO_SUBMISSIONS, VISION_RULES } from "./seed";
 import { store, type Row } from "./store";
 
 const KIT_ID = DEMO_KIT.id;
 const now = () => new Date().toISOString();
 
-type KitRow = { id: string; name: string; voice: string; palette: BrandKit["palette"] };
+type KitRow = { id: string; name: string; voice: string; palette: BrandKit["palette"]; imageRulesAdded?: boolean };
 type FindingDbRow = FindingRow & { ruleId: string | null; termId: string | null; factId: string | null; createdAt: string };
 
 function toDbFinding(f: FindingRow, createdAt: string): FindingDbRow {
@@ -40,22 +41,24 @@ function toDbFinding(f: FindingRow, createdAt: string): FindingDbRow {
 
 // ---------- seeding ----------
 
-let seeding: Promise<void> | null = null;
+// On globalThis for the same reason as the file store: one seed per server process, not one per bundle.
+const SEEDING = Symbol.for("plumbline.seeding");
+const seedSlot = globalThis as unknown as Record<symbol, Promise<void> | null | undefined>;
 
 export function ensureSeeded(): Promise<void> {
-  seeding ??= (async () => {
+  seedSlot[SEEDING] ??= (async () => {
     const s = store();
     const kits = await s.list<KitRow>("kits");
-    if (kits.length) return;
+    if (kits.length) return addImageRules(kits[0]);
     const { rules, terms, facts, ...meta } = DEMO_KIT;
-    await s.insert("kits", [meta as unknown as Row]);
+    await s.insert("kits", [{ ...meta, imageRulesAdded: true } as unknown as Row]);
     await s.insert("rules", rules.map((r) => ({ ...r, kitId: KIT_ID }) as unknown as Row));
     await s.insert("terms", terms.map((t) => ({ ...t, kitId: KIT_ID }) as unknown as Row));
     await s.insert("facts", facts.map((f) => ({ ...f, kitId: KIT_ID }) as unknown as Row));
 
     for (const demo of DEMO_SUBMISSIONS) {
       const at = new Date(Date.now() - demo.daysAgo * 86400000 - 3600000).toISOString();
-      const result = await runReview({ text: demo.text, kit: DEMO_KIT, image: demo.image, keyMessage: demo.keyMessage, channel: demo.channel });
+      const result = asSample(await runReview({ text: demo.text, kit: DEMO_KIT, image: demo.image, keyMessage: demo.keyMessage, channel: demo.channel }));
       const sub = await insertSubmission(
         { title: demo.title, channel: demo.channel, aiAssisted: demo.aiAssisted, keyMessage: demo.keyMessage, text: demo.text, image: demo.image ?? null },
         result,
@@ -75,10 +78,29 @@ export function ensureSeeded(): Promise<void> {
       }
     }
   })().catch((e) => {
-    seeding = null;
+    seedSlot[SEEDING] = null;
     throw e;
   });
-  return seeding;
+  return seedSlot[SEEDING];
+}
+
+const SAMPLE_NOTE = "This sample was saved without AI. Run the AI check to try it.";
+
+/** Seeded drafts are checked by code at start-up, so say that instead of implying AI is off. */
+function asSample(result: ReviewResult): ReviewResult {
+  return { ...result, ai: { ...result.ai, note: SAMPLE_NOTE, calls: result.ai.calls.map((c) => ({ ...c, returned: SAMPLE_NOTE })) } };
+}
+
+/** Stores created before image rules existed get them once, so an admin can still delete them later. */
+async function addImageRules(kit: KitRow) {
+  if (kit.imageRulesAdded) return;
+  const s = store();
+  const have = new Set((await s.list<Rule>("rules", { kitId: KIT_ID })).map((r) => r.id));
+  await s.insert("rules", VISION_RULES.filter((r) => !have.has(r.id)).map((r) => ({ ...r, kitId: KIT_ID }) as unknown as Row));
+  for (const rev of await s.list<Revision>("revisions")) {
+    if (rev.image?.name === "diwali-banner.png" && !rev.image.thumbnail) await s.update("revisions", rev.id, { image: DIWALI_IMAGE });
+  }
+  await s.update("kits", kit.id, { imageRulesAdded: true });
 }
 
 // ---------- brand kit ----------
@@ -155,6 +177,7 @@ async function insertSubmission(input: NewSubmission, result: ReviewResult, role
   await s.insert("submissions", [sub as unknown as Row]);
   await insertRevision(sub.id, 1, input.text, input.image, result, at);
   await audit(sub.id, role, "submission.created", `v1 checked · score ${result.score} · ${result.findings.length} finding(s)`, at);
+  await auditAi(sub.id, role, result, at);
   return sub;
 }
 
@@ -166,6 +189,7 @@ async function insertRevision(submissionId: string, n: number, text: string, ima
     n,
     text,
     image,
+    imageReport: result.imageReport,
     score: result.score,
     ai: result.ai,
     claims: result.claims,
@@ -192,6 +216,7 @@ export async function addRevision(id: string, text: string, image: ImageInput | 
   const rev = await insertRevision(id, n, text, image, result);
   await s.update("submissions", id, { updatedAt: now(), status: "draft" });
   await audit(id, role, "revision.created", `v${n} checked · score ${result.score} · ${result.findings.length} finding(s)`);
+  await auditAi(id, role, result);
   return rev;
 }
 
@@ -280,6 +305,14 @@ export async function setStatus(id: string, status: SubmissionStatus, role: Role
 }
 
 // ---------- audit ----------
+
+/** Every real AI call goes in the audit log, including the ones that failed. */
+async function auditAi(submissionId: string, role: Role, result: ReviewResult, at = now()) {
+  for (const c of result.ai.calls.filter((x) => x.status !== "skipped")) {
+    const what = c.pass === "image" ? "AI image check" : "AI tone check";
+    await audit(submissionId, role, `ai.${c.pass}`, `${what} ${c.status === "ran" ? `ran on ${c.model}` : "failed"} in ${(c.ms / 1000).toFixed(1)} s: ${c.returned}`, at);
+  }
+}
 
 export async function audit(submissionId: string | null, role: Role, action: string, detail: string, at = now()) {
   const entry: AuditEntry = { id: uid("a"), submissionId, role, action, detail, at };

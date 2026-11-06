@@ -2,52 +2,48 @@
 
 import { diffWords } from "diff";
 import { AnimatePresence, motion } from "motion/react";
-import {
-  ArrowLeft,
-  Bot,
-  Check,
-  CheckCircle2,
-  ClipboardCopy,
-  FileClock,
-  ImageIcon,
-  PencilLine,
-  RefreshCw,
-  Send,
-  ShieldAlert,
-  Undo2,
-} from "lucide-react";
+import { ArrowLeft, Bot, CheckCircle2, ImageUp, PencilLine, RefreshCw, Undo2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { can } from "@/lib/auth-shared";
 import type { SubmissionDetail } from "@/lib/db/repo";
-import type { FindingRow, FindingStatus, PaletteColor, Role, Severity } from "@/lib/types";
+import { prepareImage } from "@/lib/image-prep";
+import type { FindingRow, FindingStatus, ImageInput, PaletteColor, Role } from "@/lib/types";
 import { applyAccepted, DraftView } from "./DraftView";
 import { FindingCard } from "./FindingCard";
-import { api, Button, Card, CLAIM, cx, ErrorNote, inputCls, Pill, ScoreRing, scoreTone, StatusPill, timeAgo } from "./ui";
+import { AiActivity, aiSummary } from "./review/AiActivity";
+import { ImagePanel } from "./review/ImagePanel";
+import { NextStep } from "./review/NextStep";
+import { api, Button, Card, CLAIM, cx, ErrorNote, Fold, Pill, ScoreRing, scoreTone, StatusPill, timeAgo } from "./ui";
 
-type Filter = "open" | Severity | "all";
+type Tab = "todo" | "done";
 
 const WEIGHT = { blocker: 18, warning: 7, suggestion: 2 } as const;
-const liveScore = (fs: FindingRow[]) =>
-  Math.max(0, 100 - fs.filter((f) => f.status === "open" || f.status === "disputed").reduce((s, f) => s + WEIGHT[f.severity], 0));
+const isOpen = (f: FindingRow) => f.status === "open" || f.status === "disputed";
+const liveScore = (fs: FindingRow[]) => Math.max(0, 100 - fs.filter(isOpen).reduce((s, f) => s + WEIGHT[f.severity], 0));
 
 export function ReviewWorkspace({ detail, palette, role }: { detail: SubmissionDetail; palette: PaletteColor[]; role: Role }) {
   const router = useRouter();
   const { submission: sub, revisions, audit } = detail;
   const rev = revisions[revisions.length - 1];
+
   const [findings, setFindings] = useState(detail.findings);
-  // Re-sync with fresh server data after router.refresh() (derived during render, not in an effect).
+  const [saving, setSaving] = useState<string[]>([]);
+  // Fresh server data replaces local state, but never while a decision is still on its way:
+  // that would flip a card back to its old state.
   const [synced, setSynced] = useState(detail.findings);
-  if (synced !== detail.findings) {
+  if (synced !== detail.findings && saving.length === 0) {
     setSynced(detail.findings);
     setFindings(detail.findings);
   }
 
+  const inFlight = useRef(0);
+  const replaceRef = useRef<HTMLInputElement>(null);
   const [active, setActive] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<Filter>("open");
+  const [tab, setTab] = useState<Tab>("todo");
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
   const [note, setNote] = useState("");
@@ -55,62 +51,79 @@ export function ReviewWorkspace({ detail, palette, role }: { detail: SubmissionD
   const [diffWith, setDiffWith] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const isOpen = (f: FindingRow) => f.status === "open" || f.status === "disputed";
+  const locked = sub.status === "approved";
+  const canEdit = can(role, "editDraft") && !locked;
   const open = findings.filter(isOpen);
   const blockers = open.filter((f) => f.severity === "blocker").length;
   const routed = open.filter((f) => f.needsReview).length;
-  const accepted = findings.filter((f) => f.status === "accepted" && f.fix && f.start >= 0).length;
+  const textFixes = findings.filter((f) => f.status === "accepted" && f.fix && f.start >= 0).length;
+  const altFix = findings.find((f) => f.status === "accepted" && f.altFix && f.fix);
+  const unsaved = textFixes + (altFix ? 1 : 0);
   const score = liveScore(findings);
   const working = useMemo(() => applyAccepted(rev.text, findings), [rev.text, findings]);
   const tone = scoreTone(score);
-
-  const counts = {
-    open: open.length,
-    blocker: findings.filter((f) => f.severity === "blocker").length,
-    warning: findings.filter((f) => f.severity === "warning").length,
-    suggestion: findings.filter((f) => f.severity === "suggestion").length,
-    all: findings.length,
-  };
-  const listed = findings.filter((f) => (filter === "all" ? true : filter === "open" ? isOpen(f) : f.severity === filter));
+  const listed = tab === "todo" ? open : findings.filter((f) => !isOpen(f));
+  // Everything about the picture itself has one fix, so it sits in one group with one button.
+  const inPicture = (f: FindingRow) => f.start < 0 && !f.alt && !f.altFix;
+  const cards = listed.filter((f) => !inPicture(f));
+  const pictureCards = listed.filter(inPicture);
+  const prev = diffWith != null ? revisions.find((r) => r.n === diffWith) : null;
 
   const select = (id: string) => {
     setActive(id);
     const target = findings.find((f) => f.id === id);
-    if (target && filter !== "all" && !listed.includes(target)) setFilter("all");
+    if (target) setTab(isOpen(target) ? "todo" : "done");
     requestAnimationFrame(() => document.getElementById(`finding-${id}`)?.scrollIntoView({ behavior: "smooth", block: "nearest" }));
   };
 
   async function decide(f: FindingRow, status: FindingStatus, reason?: string): Promise<boolean> {
-    setBusy(f.id);
     setError(null);
-    const before = findings;
+    setSaving((s) => [...s, f.id]);
+    inFlight.current += 1;
     setFindings((xs) => xs.map((x) => (x.id === f.id ? { ...x, status, reason: reason ?? x.reason, decidedBy: role } : x)));
     try {
       await api(`/api/findings/${f.id}`, { method: "PATCH", body: { status, reason } });
-      router.refresh();
       return true;
     } catch (e) {
-      setFindings(before);
+      setFindings((xs) => xs.map((x) => (x.id === f.id ? f : x)));
       setError((e as Error).message);
       return false;
+    } finally {
+      inFlight.current -= 1;
+      setSaving((s) => s.filter((id) => id !== f.id));
+      if (inFlight.current === 0) router.refresh();
+    }
+  }
+
+  async function saveVersion(text: string, image?: ImageInput | null) {
+    setBusy("recheck");
+    setError(null);
+    try {
+      await api(`/api/submissions/${sub.id}/revisions`, { body: { text, image } });
+      setEditing(false);
+      setActive(null);
+      setTab("todo");
+      router.refresh();
+    } catch (e) {
+      setError((e as Error).message);
     } finally {
       setBusy(null);
     }
   }
 
-  async function recheck(text: string) {
-    setBusy("recheck");
+  /** Save accepted fixes, including accepted alt text, as the next version. */
+  const saveFixes = (text = working) => saveVersion(text, altFix && rev.image ? { ...rev.image, altText: altFix.fix } : undefined);
+
+  const saveAlt = (alt: string) => {
+    if (rev.image) saveVersion(working, { ...rev.image, altText: alt });
+  };
+
+  async function replaceImage(file: File) {
     setError(null);
     try {
-      await api(`/api/submissions/${sub.id}/revisions`, { body: { text } });
-      setEditing(false);
-      setActive(null);
-      setFilter("open");
-      router.refresh();
+      await saveVersion(working, await prepareImage(file, file.name, rev.image?.altText ?? ""));
     } catch (e) {
       setError((e as Error).message);
-    } finally {
-      setBusy(null);
     }
   }
 
@@ -129,164 +142,119 @@ export function ReviewWorkspace({ detail, palette, role }: { detail: SubmissionD
     }
   }
 
-  const prev = diffWith != null ? revisions.find((r) => r.n === diffWith) : null;
-  const imageFindings = findings.filter((f) => f.start < 0);
+  async function switchRole(next: Role) {
+    await api("/api/role", { body: { role: next } }).catch((e: Error) => setError(e.message));
+    router.refresh();
+  }
+
+  const startEdit = () => {
+    setDraft(working);
+    setEditing(true);
+    setDiffWith(null);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   return (
-    <div className="grid min-w-0 gap-6 [&>*]:min-w-0">
-      {/* header */}
-      <div className="flex flex-wrap items-start justify-between gap-4">
+    <div className="grid min-w-0 gap-5 [&>*]:min-w-0">
+      <header className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
           <Link href="/queue" className="inline-flex items-center gap-1 text-sm text-muted hover:text-ink">
-            <ArrowLeft className="size-4" /> Queue
+            <ArrowLeft className="size-4" aria-hidden /> Queue
           </Link>
           <h1 className="mt-2 text-[30px] font-semibold leading-tight tracking-[-0.03em] text-ink">{sub.title}</h1>
           <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted">
             <StatusPill s={sub.status} />
             <span>{sub.channel}</span>
             <span aria-hidden>·</span>
-            <span>v{rev.n}</span>
-            <span aria-hidden>·</span>
-            <span>checked {timeAgo(rev.createdAt)}</span>
+            <span>Version {rev.n}</span>
             {sub.aiAssisted && (
               <Pill className="bg-white text-muted ring-line">
-                <Bot className="size-3" /> AI-assisted draft
+                <Bot className="size-3" aria-hidden /> Written with AI
               </Pill>
             )}
           </div>
-          {sub.keyMessage && (
-            <p className="mt-2 text-sm text-ink">
-              <span className="kicker mr-2">Intent lock</span>“{sub.keyMessage}”
-            </p>
-          )}
         </div>
+        <div className="flex items-center gap-3">
+          <ScoreRing score={score} size={60} />
+          <p className={cx("font-medium leading-tight", tone.text)}>{tone.word}</p>
+        </div>
+      </header>
 
-        <Card className="flex items-center gap-4 px-4 py-3">
-          <ScoreRing score={score} size={68} />
-          <div className="leading-tight">
-            <p className={cx("font-medium", tone.text)}>{tone.word}</p>
-            <p className="num text-[13px] text-muted">
-              {open.length} open · {blockers} blocker{blockers === 1 ? "" : "s"}
-            </p>
-            {revisions.length > 1 && (
-              <p className="num mt-0.5 text-[13px] text-muted">
-                v1 {revisions[0].score} → v{rev.n} {score}
-              </p>
-            )}
-          </div>
-        </Card>
-      </div>
-
-      <WorkflowBar
+      <NextStep
         role={role}
         status={sub.status}
+        open={open.length}
         blockers={blockers}
         routed={routed}
+        unsaved={unsaved}
         busy={busy}
         askChanges={askChanges}
         setAskChanges={setAskChanges}
         note={note}
         setNote={setNote}
+        copied={copied}
         onAction={workflow}
         onCopy={async () => {
           await navigator.clipboard.writeText(working).catch(() => null);
           setCopied(true);
           setTimeout(() => setCopied(false), 1600);
         }}
-        copied={copied}
+        onSwitchRole={switchRole}
       />
 
       <AnimatePresence>{error && <ErrorNote error={error} />}</AnimatePresence>
 
-      <div className="grid min-w-0 items-start gap-6 [&>*]:min-w-0 lg:grid-cols-[minmax(0,1.3fr)_minmax(340px,1fr)]">
-        {/* draft column */}
-        <div className="grid min-w-0 gap-4 lg:sticky lg:top-20 [&>*]:min-w-0">
-          <Card className="overflow-hidden">
-            <div className="flex items-center gap-2 border-b border-hair px-4 py-2.5">
-              <p className="kicker">{editing ? "Editing" : prev ? `Changes since v${prev.n}` : "Draft"}</p>
-              <div className="ml-auto flex items-center gap-1.5">
-                {revisions.length > 1 && !editing && (
-                  <select
-                    aria-label="Compare with an earlier version"
-                    value={diffWith ?? ""}
-                    onChange={(e) => setDiffWith(e.target.value ? Number(e.target.value) : null)}
-                    className="h-8 rounded-lg border border-line bg-white px-2 text-[13px] text-ink"
-                  >
-                    <option value="">Findings view</option>
-                    {revisions.slice(0, -1).map((r) => (
-                      <option key={r.id} value={r.n}>
-                        Compare with v{r.n} ({r.score})
-                      </option>
-                    ))}
-                  </select>
-                )}
-                {can(role, "editDraft") && !editing && sub.status !== "approved" && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    icon={<PencilLine className="size-3.5" />}
-                    onClick={() => {
-                      setDraft(working);
-                      setEditing(true);
-                      setDiffWith(null);
-                    }}
-                  >
+      <div className="grid min-w-0 items-start gap-5 [&>*]:min-w-0 lg:grid-cols-[minmax(0,1.25fr)_minmax(340px,1fr)]">
+        <div className="grid min-w-0 gap-4 [&>*]:min-w-0">
+          {rev.image && <ImagePanel image={rev.image} report={rev.imageReport ?? null} palette={palette} canReplace={canEdit} busy={busy === "recheck"} onReplace={replaceImage} />}
+
+          {(rev.text || editing) && (
+            <Card className="overflow-hidden">
+              <div className="flex items-center gap-2 border-b border-hair px-4 py-2.5">
+                <p className="text-[14px] font-medium text-ink">{editing ? "Editing" : prev ? `Changes since version ${prev.n}` : "Text"}</p>
+                {canEdit && !editing && (
+                  <Button className="ml-auto" size="sm" variant="ghost" icon={<PencilLine className="size-3.5" />} onClick={startEdit}>
                     Edit
                   </Button>
                 )}
               </div>
-            </div>
-            <div className="px-5 py-5 sm:px-7 sm:py-6">
-              {editing ? (
-                <textarea
-                  value={draft}
-                  onChange={(e) => setDraft(e.target.value)}
-                  rows={8}
-                  autoFocus
-                  aria-label="Draft text"
-                  className="w-full resize-y bg-transparent text-[18px] leading-[1.7] text-ink outline-none"
-                />
-              ) : prev ? (
-                <DiffView before={prev.text} after={rev.text} />
-              ) : (
-                <DraftView text={rev.text} findings={findings} activeId={active} onSelect={select} />
-              )}
-            </div>
-            {(editing || accepted > 0) && sub.status !== "approved" && can(role, "editDraft") && (
-              <div className="flex flex-wrap items-center gap-2 border-t border-hair bg-ash-50/60 px-4 py-3">
-                <p className="text-[13px] text-ink">
-                  {editing ? "Plumbline re-runs every check on the new version." : `${accepted} fix${accepted === 1 ? "" : "es"} applied. Save them as v${rev.n + 1} and re-check.`}
-                </p>
-                <div className="ml-auto flex gap-1.5">
-                  {editing && (
-                    <Button size="sm" variant="ghost" icon={<Undo2 className="size-3.5" />} onClick={() => setEditing(false)}>
-                      Cancel
-                    </Button>
-                  )}
-                  <Button
-                    size="sm"
-                    variant="primary"
-                    loading={busy === "recheck"}
-                    icon={<RefreshCw className="size-3.5" />}
-                    onClick={() => recheck(editing ? draft : working)}
-                    disabled={editing && !draft.trim()}
-                  >
-                    Save v{rev.n + 1} &amp; re-check
+              <div className="px-5 py-5 sm:px-6">
+                {editing ? (
+                  <textarea value={draft} onChange={(e) => setDraft(e.target.value)} rows={7} autoFocus aria-label="Draft text" className="w-full resize-y bg-transparent text-[18px] leading-[1.7] text-ink outline-none" />
+                ) : prev ? (
+                  <DiffView before={prev.text} after={rev.text} />
+                ) : (
+                  <DraftView text={rev.text} findings={findings} activeId={active} onSelect={select} />
+                )}
+              </div>
+              {editing && (
+                <div className="flex flex-wrap items-center justify-end gap-1.5 border-t border-hair bg-ash-50/60 px-4 py-3">
+                  <Button size="sm" variant="ghost" icon={<Undo2 className="size-3.5" />} onClick={() => setEditing(false)}>
+                    Cancel
+                  </Button>
+                  <Button size="sm" variant="primary" loading={busy === "recheck"} icon={<RefreshCw className="size-3.5" />} onClick={() => saveFixes(draft)} disabled={!draft.trim() && !rev.image}>
+                    Save and check again
                   </Button>
                 </div>
-              </div>
-            )}
-          </Card>
+              )}
+            </Card>
+          )}
+          {!rev.text && !editing && canEdit && (
+            <Button className="w-fit" size="sm" variant="ghost" icon={<PencilLine className="size-3.5" />} onClick={startEdit}>
+              Add a caption
+            </Button>
+          )}
 
-          {rev.image && <ImagePanel image={rev.image} findings={imageFindings} palette={palette} onSelect={select} />}
+          <Fold title={aiSummary(rev.ai)} icon={<Bot className="size-4 text-ash-600" aria-hidden />} defaultOpen>
+            <AiActivity ai={rev.ai} canRun={canEdit} busy={busy === "recheck"} onRun={() => saveFixes()} />
+          </Fold>
 
           {rev.claims.length > 0 && (
-            <Card className="px-4 py-3.5">
-              <p className="kicker">Claims found · checked against the facts register</p>
-              <ul className="mt-2 grid gap-1.5">
+            <Fold title={`Claims checked against approved facts (${rev.claims.length})`}>
+              <ul className="grid gap-1.5 px-4 py-3">
                 {rev.claims.map((c, i) => (
                   <li key={i} className="flex items-center justify-between gap-3 text-sm">
-                    <span className="truncate text-sm font-medium text-ink">“{c.quote}”</span>
+                    <span className="truncate font-medium text-ink">“{c.quote}”</span>
                     <Pill className={cx("shrink-0 ring-transparent", CLAIM[c.status].cls)}>
                       {CLAIM[c.status].label}
                       {c.factId ? ` · ${c.factId}` : ""}
@@ -294,177 +262,140 @@ export function ReviewWorkspace({ detail, palette, role }: { detail: SubmissionD
                   </li>
                 ))}
               </ul>
-            </Card>
+            </Fold>
           )}
 
-          <div className="flex items-start gap-2.5 rounded-2xl border border-dashed border-ash-300 bg-white/60 px-4 py-3 text-[13px] text-ink">
-            <Bot className="mt-0.5 size-4 shrink-0 text-ash-600" />
-            <p>
-              <b className="font-medium text-ink">AI use for this check: </b>
-              {rev.ai.provider ? `${rev.ai.provider} (${rev.ai.passes.join(", ")} pass). ` : "none. "}
-              {rev.ai.note} {rev.dropped > 0 && `The verifier rejected ${rev.dropped} AI finding(s) whose quote or rule didn't exist.`}
-            </p>
-          </div>
+          <Fold title={`History (${audit.length})`}>
+            <div className="grid gap-3 px-4 py-3">
+              {revisions.length > 1 && (
+                <label className="flex flex-wrap items-center gap-2 text-[13px] text-muted">
+                  Compare text with
+                  <select value={diffWith ?? ""} onChange={(e) => setDiffWith(e.target.value ? Number(e.target.value) : null)} className="h-8 rounded-md border border-line bg-white px-2 text-[13px] text-ink">
+                    <option value="">Nothing</option>
+                    {revisions.slice(0, -1).map((r) => (
+                      <option key={r.id} value={r.n}>
+                        Version {r.n} (score {r.score})
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+              <ol className="grid gap-2.5">
+                {audit.slice(0, 12).map((a) => (
+                  <li key={a.id} className="text-[13px]">
+                    <span className="font-medium capitalize text-ink">{a.role}</span> <span className="text-ink">{a.detail}</span>
+                    <span className="block text-muted" suppressHydrationWarning>{timeAgo(a.at)}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          </Fold>
         </div>
 
-        {/* findings column */}
-        <div className="grid min-w-0 gap-3 [&>*]:min-w-0">
-          <div className="flex gap-1 overflow-x-auto rounded-lg bg-white p-1 ring-1 ring-line text-[13px]" role="tablist" aria-label="Filter findings">
-            {(["open", "blocker", "warning", "suggestion", "all"] as Filter[]).map((k) => (
+        <section className="grid min-w-0 gap-3 [&>*]:min-w-0" aria-label="Issues">
+          <div className="flex gap-1 rounded-lg bg-white p-1 text-[14px] ring-1 ring-line" role="tablist" aria-label="Issues">
+            {(["todo", "done"] as Tab[]).map((k) => (
               <button
                 key={k}
                 role="tab"
-                aria-selected={filter === k}
-                onClick={() => setFilter(k)}
-                className={cx(
-                  "relative flex-1 whitespace-nowrap rounded-lg px-1.5 py-1.5 capitalize transition-colors",
-                  filter === k ? "font-medium text-white" : "text-ink hover:bg-ash-50"
-                )}
+                aria-selected={tab === k}
+                onClick={() => setTab(k)}
+                className={cx("flex-1 rounded-md px-2 py-1.5 transition-colors", tab === k ? "bg-soot font-medium text-white" : "text-ink hover:bg-ash-50")}
               >
-                {filter === k && <motion.span layoutId="filter-pill" className="absolute inset-0 rounded-md bg-soot" transition={{ type: "spring", stiffness: 500, damping: 40 }} />}
-                <span className="relative">
-                  {k === "all" ? "All" : k === "open" ? "Open" : k + "s"} <span className="num opacity-70">{counts[k]}</span>
-                </span>
+                {k === "todo" ? "To do" : "Done"} <span className="num opacity-70">{k === "todo" ? open.length : findings.length - open.length}</span>
               </button>
             ))}
           </div>
 
           {listed.length === 0 ? (
             <Card className="grid place-items-center gap-2 px-6 py-12 text-center">
-              <CheckCircle2 className="size-8 text-green" />
-              <p className="text-lg font-semibold text-ink">{filter === "open" ? "Nothing open" : "Nothing here"}</p>
-              <p className="max-w-xs text-sm text-muted">
-                {filter === "open" ? "Every finding on this version has been decided." : "No findings of this kind on this version."}
-              </p>
+              <CheckCircle2 className="size-8 text-green" aria-hidden />
+              <p className="text-lg font-semibold text-ink">{tab === "todo" ? "Nothing left to do" : "Nothing decided yet"}</p>
+              <p className="max-w-xs text-sm text-muted">{tab === "todo" ? "Every issue on this version has been decided." : "Accepted fixes and other decisions appear here."}</p>
             </Card>
           ) : (
-            <motion.div layout className="grid gap-3">
-              <AnimatePresence initial={false}>
-                {listed.map((f) => (
-                  <motion.div key={f.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.98, transition: { duration: 0.15 } }}>
-                    <FindingCard f={f} role={role} active={active === f.id} busy={busy === f.id} onSelect={() => setActive(f.id)} onDecide={(s, r) => decide(f, s, r)} />
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-            </motion.div>
+            <>
+              {cards.length > 0 && <CardList items={cards} role={role} activeId={active} saving={saving} locked={locked} onSelect={setActive} onDecide={decide} onEdit={startEdit} onSaveAlt={saveAlt} onSwitchToCreator={() => switchRole("creator")} />}
+              {pictureCards.length > 0 && (
+                <div className="grid gap-3">
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
+                    <p className="text-[14px] font-medium text-ink">In the picture ({pictureCards.length})</p>
+                    {canEdit && tab === "todo" && (
+                      <Button className="ml-auto" size="sm" variant="secondary" loading={busy === "recheck"} icon={<ImageUp className="size-3.5" />} onClick={() => replaceRef.current?.click()}>
+                        Replace image
+                      </Button>
+                    )}
+                  </div>
+                  <CardList items={pictureCards} role={role} activeId={active} saving={saving} locked={locked} onSelect={setActive} onDecide={decide} onEdit={startEdit} onSaveAlt={saveAlt} onSwitchToCreator={() => switchRole("creator")} />
+                </div>
+              )}
+            </>
           )}
-
-          <Card className="px-4 py-3.5">
-            <p className="kicker flex items-center gap-1.5">
-              <FileClock className="size-3.5" /> Activity · audit trail
-            </p>
-            <ol className="mt-2.5 grid gap-2.5">
-              {audit.slice(0, 12).map((a) => (
-                <li key={a.id} className="grid grid-cols-[auto_1fr] gap-2.5 text-[13px]">
-                  <span className="mt-1.5 size-1.5 rounded-full bg-ash-400" aria-hidden />
-                  <span>
-                    <span className="font-medium capitalize text-ink">{a.role}</span> <span className="text-ink">{a.detail}</span>
-                    <span className="block text-[13px] text-muted">{timeAgo(a.at)}</span>
-                  </span>
-                </li>
-              ))}
-            </ol>
-          </Card>
-        </div>
+          <input
+            ref={replaceRef}
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            hidden
+            aria-label="Replace image"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) replaceImage(file);
+              e.target.value = "";
+            }}
+          />
+        </section>
       </div>
+
+      <AnimatePresence>
+        {unsaved > 0 && canEdit && !editing && (
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 16 }} className="sticky bottom-4 z-20 flex flex-wrap items-center gap-3 rounded-lg bg-soot px-4 py-3 text-white shadow-lift" role="status">
+            <CheckCircle2 className="size-5 text-lime" aria-hidden />
+            <p className="text-[15px]">
+              {unsaved} fix{unsaved === 1 ? "" : "es"} applied. Save to create version {rev.n + 1} and check it again.
+            </p>
+            <Button className="ml-auto" size="sm" variant="primary" loading={busy === "recheck"} icon={<RefreshCw className="size-3.5" />} onClick={() => saveFixes()}>
+              Save and check again
+            </Button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
 
-function WorkflowBar(props: {
+interface CardListProps {
+  items: FindingRow[];
   role: Role;
-  status: SubmissionDetail["submission"]["status"];
-  blockers: number;
-  routed: number;
-  busy: string | null;
-  askChanges: boolean;
-  setAskChanges: (v: boolean) => void;
-  note: string;
-  setNote: (v: string) => void;
-  onAction: (a: "send" | "approve" | "request_changes") => void;
-  onCopy: () => void;
-  copied: boolean;
-}) {
-  const { role, status, blockers, routed, busy } = props;
-  let body: React.ReactNode = null;
+  activeId: string | null;
+  saving: string[];
+  locked: boolean;
+  onSelect: (id: string) => void;
+  onDecide: (f: FindingRow, status: FindingStatus, reason?: string) => Promise<boolean>;
+  onEdit: () => void;
+  onSaveAlt: (alt: string) => void;
+  onSwitchToCreator: () => void;
+}
 
-  if (status === "approved") {
-    body = (
-      <>
-        <CheckCircle2 className="size-5 text-green" />
-        <p className="text-sm text-ink">
-          <b className="font-medium">Approved for publishing.</b> Plumbline never publishes. Copy the final text into your tool.
-        </p>
-        <Button className="ml-auto" size="sm" variant="secondary" icon={props.copied ? <Check className="size-3.5" /> : <ClipboardCopy className="size-3.5" />} onClick={props.onCopy}>
-          {props.copied ? "Copied" : "Copy final text"}
-        </Button>
-      </>
-    );
-  } else if (can(role, "approve") && status === "in_review") {
-    const blocked = blockers > 0 || routed > 0;
-    body = (
-      <>
-        <ShieldAlert className={cx("size-5", blocked ? "text-red" : "text-green")} />
-        <p className="text-sm text-ink">
-          {blocked
-            ? `${blockers ? `${blockers} blocker${blockers > 1 ? "s" : ""} open` : ""}${blockers && routed ? " and " : ""}${routed ? `${routed} item${routed > 1 ? "s" : ""} waiting for a reviewer` : ""}. Override or wait before approving.`
-            : "Pre-checked and clear of blockers. Ready for your sign-off."}
-        </p>
-        <div className="ml-auto flex gap-1.5">
-          <Button size="sm" variant="secondary" onClick={() => props.setAskChanges(!props.askChanges)}>
-            Request changes
-          </Button>
-          <Button size="sm" variant="success" disabled={blocked} loading={busy === "approve"} icon={<Check className="size-3.5" />} onClick={() => props.onAction("approve")}>
-            Approve
-          </Button>
-        </div>
-      </>
-    );
-  } else if (can(role, "submit") && (status === "draft" || status === "changes_requested")) {
-    body = (
-      <>
-        <Send className="size-5 text-ash-600" />
-        <p className="text-sm text-ink">
-          {blockers ? `${blockers} blocker${blockers > 1 ? "s" : ""} still open. An approver will see ${blockers > 1 ? "them" : "it"}.` : "Looks good. Send it to an approver when you're ready."}
-        </p>
-        <Button className="ml-auto" size="sm" variant="primary" loading={busy === "send"} icon={<Send className="size-3.5" />} onClick={() => props.onAction("send")}>
-          Send for approval
-        </Button>
-      </>
-    );
-  } else if (can(role, "clearClaim") && routed > 0) {
-    body = (
-      <>
-        <ShieldAlert className="size-5 text-ash-600" />
-        <p className="text-sm text-ink">
-          {routed} item{routed > 1 ? "s" : ""} routed to you. Check each claim and clear it, or leave it for the creator to fix.
-        </p>
-      </>
-    );
-  } else {
-    body = <p className="text-sm text-muted">Viewing as {role}. {status === "in_review" ? "Waiting for an approver." : "Waiting for the creator."}</p>;
-  }
-
+function CardList({ items, role, activeId, saving, locked, onSelect, onDecide, onEdit, onSaveAlt, onSwitchToCreator }: CardListProps) {
   return (
-    <div className="rounded-2xl border border-line bg-white">
-      <div className="flex flex-wrap items-center gap-3 px-4 py-3">{body}</div>
-      <AnimatePresence>
-        {props.askChanges && (
-          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-            <div className="flex flex-col gap-2 border-t border-hair px-4 py-3 sm:flex-row">
-              <input
-                autoFocus
-                value={props.note}
-                onChange={(e) => props.setNote(e.target.value)}
-                placeholder="What should the creator change?"
-                className={inputCls}
-              />
-              <Button variant="primary" loading={busy === "request_changes"} onClick={() => props.onAction("request_changes")}>
-                Send back
-              </Button>
-            </div>
+    <div className="grid gap-3">
+      <AnimatePresence initial={false} mode="popLayout">
+        {items.map((f) => (
+          <motion.div key={f.id} layout initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: 24, transition: { duration: 0.18 } }}>
+            <FindingCard
+              f={f}
+              role={role}
+              active={activeId === f.id}
+              busy={saving.includes(f.id)}
+              locked={locked}
+              onSelect={() => onSelect(f.id)}
+              onDecide={(status, reason) => onDecide(f, status, reason)}
+              onEdit={onEdit}
+              onSaveAlt={onSaveAlt}
+              onSwitchToCreator={onSwitchToCreator}
+            />
           </motion.div>
-        )}
+        ))}
       </AnimatePresence>
     </div>
   );
@@ -488,66 +419,5 @@ function DiffView({ before, after }: { before: string; after: string }) {
         )
       )}
     </div>
-  );
-}
-
-function ImagePanel({
-  image,
-  findings,
-  palette,
-  onSelect,
-}: {
-  image: NonNullable<SubmissionDetail["revisions"][number]["image"]>;
-  findings: FindingRow[];
-  palette: PaletteColor[];
-  onSelect: (id: string) => void;
-}) {
-  return (
-    <Card className="grid gap-3 px-4 py-3.5 sm:grid-cols-[140px_1fr]">
-      <div className="grid aspect-[4/3] w-full max-w-[220px] place-items-center overflow-hidden rounded-xl border border-line bg-ash-50">
-        {image.thumbnail ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={image.thumbnail} alt={image.altText || "Uploaded image (no alt text yet)"} className="size-full object-cover" />
-        ) : (
-          <div className="flex size-full">
-            {image.colors.map((c) => (
-              <span key={c} className="flex-1" style={{ background: c }} />
-            ))}
-          </div>
-        )}
-      </div>
-      <div className="min-w-0">
-        <p className="kicker flex items-center gap-1.5">
-          <ImageIcon className="size-3.5" /> {image.name}
-        </p>
-        <p className="mt-1 text-sm text-ink">
-          Alt text: {image.altText?.trim() ? <span className="text-ink">“{image.altText}”</span> : <span className="text-red-700">missing</span>}
-        </p>
-        <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[13px] text-muted">
-          <span>Dominant</span>
-          {image.colors.map((c) => (
-            <span key={c} className="num inline-flex items-center gap-1 rounded-md border border-line px-1.5 py-0.5">
-              <span className="size-3 rounded-sm ring-1 ring-black/10" style={{ background: c }} />
-              {c}
-            </span>
-          ))}
-        </div>
-        <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[13px] text-muted">
-          <span>Brand</span>
-          {palette.map((p) => (
-            <span key={p.hex} title={p.name} className="size-4 rounded-sm ring-1 ring-black/10" style={{ background: p.hex }} />
-          ))}
-        </div>
-        {findings.length > 0 && (
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {findings.map((f) => (
-              <button key={f.id} onClick={() => onSelect(f.id)} className="rounded-md bg-ash-50 px-2 py-1 text-[13px] text-ash-700 hover:bg-ash-100">
-                {f.cites.label}: {f.status === "open" ? "open" : f.status}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-    </Card>
   );
 }

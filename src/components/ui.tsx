@@ -1,7 +1,7 @@
 "use client";
 
 import { animate, motion, useMotionValue, useTransform } from "motion/react";
-import { Loader2 } from "lucide-react";
+import { ChevronDown, Loader2 } from "lucide-react";
 import { forwardRef, useEffect, type ButtonHTMLAttributes, type ReactNode } from "react";
 import type { ClaimStatus, FindingStatus, IssueType, Severity, SubmissionStatus } from "@/lib/types";
 
@@ -190,6 +190,20 @@ export function Logo({ className, tone = "ink" }: { className?: string; tone?: "
 
 export function Card({ children, className }: { children: ReactNode; className?: string }) {
   return <div className={cx("rounded-lg bg-white ring-1 ring-line", className)}>{children}</div>;
+}
+
+/** A section that stays out of the way until someone wants it. */
+export function Fold({ title, icon, defaultOpen, children }: { title: string; icon?: ReactNode; defaultOpen?: boolean; children: ReactNode }) {
+  return (
+    <details open={defaultOpen} className="group rounded-lg bg-white ring-1 ring-line">
+      <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-[14px] font-medium text-ink marker:hidden [&::-webkit-details-marker]:hidden">
+        {icon}
+        {title}
+        <ChevronDown className="ml-auto size-4 text-muted transition-transform group-open:rotate-180" aria-hidden />
+      </summary>
+      <div className="border-t border-hair">{children}</div>
+    </details>
+  );
 }
 
 export function Field({ label, hint, children, htmlFor }: { label: string; hint?: string; children: ReactNode; htmlFor?: string }) {

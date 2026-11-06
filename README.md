@@ -46,7 +46,8 @@ How trust is built into the design:
 - **The model never writes to the database.** Its JSON is schema-checked and verified against the draft first.
 - **The draft is fenced as untrusted data** in the prompt, and instructions inside it are ignored.
 - **Emails, phone numbers and ID numbers are masked** before any AI call, and offsets are mapped back afterwards.
-- **Images are analysed in the browser.** Dominant colours are computed on a canvas. Only a small thumbnail is sent, and only to draft alt text.
+- **Images get a small copy, not the original.** Dominant colours are computed on a canvas in the browser. A resized copy goes to Gemini, which judges it against the kit's image rules and reads any words on it. Code then checks those words for wrong names and unproven claims.
+- **An AI opinion about a picture never blocks on its own.** Each verdict must cite a real image rule and give a reason. If the AI returns no usable verdicts, the check is shown as failed, never as a pass.
 - **Every check discloses its AI use:** the provider, which passes used it, and how many AI findings the verifier dropped.
 
 ## Run locally
@@ -85,10 +86,19 @@ CI (GitHub Actions) runs typecheck, tests and a production build on every push.
 | Claim checker (supported / unsupported / outdated / contradicted) | ✅ built |
 | Intent-preserving fixes with an intent-lock check | ✅ built (token-level check; semantic check planned) |
 | Workflow: roles, per-finding decisions, routing, approvals, overrides, versions, audit log | ✅ built |
-| Basic image checks: contrast, palette, alt text (+ AI-drafted alt text) | ✅ built |
+| Image checks: AI judges photos against the Brand Kit, reads words on the image; palette, contrast and alt text by code | ✅ built |
 | AI-use disclosure on every review | ✅ built |
 | Insights + Guideline Gap Finder | ⏳ early version built; fuller version in Round 3 |
+| Video, Instagram Reels and YouTube Shorts checks | Round 3 |
 | Logo / layout checks on full designs, learning from reviewer decisions, real auth (Supabase Auth) | Round 3 |
+
+## Demo image credits
+
+All three photographs are CC0. The brand text on the banners was added for this demo, and QuickKart is a fictional brand.
+
+- "Free closeup fresh vegetables table" via [rawpixel](https://www.rawpixel.com/image/5927583/photo-image-public-domain-plant-fruit)
+- "A platter brimming with oil lamps, during the Diwali evening." by Hemant Kumar Chhapoliya, via WordPress Photo Directory
+- "(flou) The Collection Cars (1)" by Mathious Ier, via Wikimedia Commons
 
 ## Disclosure
 
