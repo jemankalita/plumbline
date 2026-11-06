@@ -66,9 +66,14 @@ export const draftSchema = z.object({
   channel: z.string().trim().min(1).max(40),
   aiAssisted: z.boolean(),
   keyMessage: z.string().trim().max(200).nullish(),
-  text: z.string().trim().min(1, "Paste or upload some content").max(20000),
+  text: z.string().trim().max(20000),
   image: imageSchema,
 });
+
+/** A check needs something to look at: words, a picture, or both. */
+export function requireContent(input: { text: string; image?: unknown }) {
+  if (!input.text && !input.image) throw new BadRequest("Add some text or an image to check.");
+}
 
 export const severity = z.enum(["blocker", "warning", "suggestion"]);
 export const category = z.enum(["terminology", "tone", "messaging", "claim", "readability", "accessibility", "visual", "legal"]);
@@ -88,6 +93,7 @@ export const ruleSchema = z.object({
       z.object({ kind: z.literal("altText") }),
       z.object({ kind: z.literal("contrast"), min: z.number().min(1).max(21) }),
       z.object({ kind: z.literal("palette"), maxDistance: z.number().min(1).max(100) }),
+      z.object({ kind: z.literal("vision") }),
     ])
     .nullish(),
   goodExample: z.string().max(300).nullish(),

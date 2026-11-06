@@ -6,6 +6,7 @@ import { useState, type ReactNode } from "react";
 import { cx, Logo } from "../ui";
 import { EASE, type BoardRow, type LandingData, type ReplayRun } from "./data";
 import { Closing, Names, Panel, Playground } from "./LandingParts";
+import { PhotoCheck } from "./PhotoCheck";
 import { Replay } from "./Replay";
 
 export function Landing(data: LandingData) {
@@ -16,6 +17,7 @@ export function Landing(data: LandingData) {
       <Stages />
       <Panel />
       <Playground aiOn={data.aiOn} />
+      <PhotoCheck aiOn={data.aiOn} />
       <Names columns={data.columns} />
       <Closing />
     </div>
@@ -45,6 +47,7 @@ const NAV = [
   { href: "#board", label: "Live check" },
   { href: "#how", label: "How it works" },
   { href: "#try", label: "Try it" },
+  { href: "#photos", label: "Check a photo" },
 ];
 
 function Masthead({ run }: { run: ReplayRun }) {

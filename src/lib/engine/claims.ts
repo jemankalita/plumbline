@@ -12,6 +12,7 @@ export interface Claim {
   sentence: string;
   kind: "number" | "superlative";
   value?: number;
+  percent?: boolean;
   phrase?: string;
 }
 
@@ -60,7 +61,7 @@ export function extractClaims(text: string, kit?: BrandKit): Claim[] {
       if (isYear(n.value, n.raw)) continue;
       const start = s.start + n.start;
       const end = extend(text, s.start + n.end, n.percent ? 1 : 2, stop);
-      out.push({ start, end, quote: text.slice(start, end), sentence: s.text, kind: "number", value: n.value });
+      out.push({ start, end, quote: text.slice(start, end), sentence: s.text, kind: "number", value: n.value, percent: n.percent });
     }
     for (const sp of superlativeSpans(local)) {
       const start = s.start + sp.start;
@@ -128,7 +129,8 @@ export function checkClaims(text: string, kit: BrandKit, today = new Date()): Cl
 
   for (const c of extractClaims(text, kit)) {
     const hit = matchFact(c, kit.facts);
-    const fact = hit?.fact;
+    // A percentage can only be compared with a fact that is itself a percentage.
+    const fact = c.percent && !hit?.fact.statement.includes("%") ? undefined : hit?.fact;
     // A superlative is supported only by a fact that names that exact superlative as a keyword.
     const supportsSuperlative =
       c.kind === "superlative" && fact && c.phrase

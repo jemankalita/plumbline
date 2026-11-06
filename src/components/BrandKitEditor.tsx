@@ -17,6 +17,7 @@ const CHECK_LABEL: Record<RuleCheck["kind"], string> = {
   altText: "Alt text",
   contrast: "WCAG contrast",
   palette: "Palette match",
+  vision: "AI looks at the image",
 };
 
 function daysUntil(date: string, today: string) {

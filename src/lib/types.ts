@@ -19,7 +19,8 @@ export type RuleCheck =
   | { kind: "superlative" }
   | { kind: "altText" }
   | { kind: "contrast"; min: number }
-  | { kind: "palette"; maxDistance: number };
+  | { kind: "palette"; maxDistance: number }
+  | { kind: "vision" }; // judged by the AI image pass, which must look at the picture
 
 export interface Rule {
   id: string;
@@ -96,6 +97,9 @@ export interface Finding {
   needsReview: boolean;
   claimStatus?: ClaimStatus | null;
   ai: boolean;
+  /** The fix is alt text to store on the image, not text to swap into the draft. */
+  altFix?: boolean;
+  alt?: boolean; // this finding is about missing alt text
   status: FindingStatus;
   decidedBy?: Role | null;
   reason?: string | null;
@@ -118,10 +122,40 @@ export interface ImageInput {
   thumbnail?: string | null;
 }
 
+/** One attempted use of AI during a check. Skipped and failed attempts are recorded too. */
+export interface AiCall {
+  pass: "judgement" | "image";
+  status: "ran" | "failed" | "skipped";
+  model: string | null;
+  ms: number;
+  sent: string; // what left the server, in plain words
+  returned: string; // what came back, or why nothing did
+}
+
 export interface AiDisclosure {
   provider: string | null; // e.g. "Google Gemini · gemini-2.5-flash", null when AI was off
   passes: Pass[];
   note: string;
+  calls: AiCall[];
+}
+
+export type ImageVerdict = "aligned" | "partly" | "off";
+
+export interface ImageCheck {
+  ruleId: string;
+  label: string; // "Rule 6.2"
+  title: string;
+  pass: boolean;
+  note: string;
+  confidence: number;
+}
+
+/** What the AI image pass saw. The verdict is worked out in code, not by the model. */
+export interface ImageReport {
+  description: string;
+  visibleText: string;
+  verdict: ImageVerdict;
+  checks: ImageCheck[];
 }
 
 export interface ReviewResult {
@@ -129,6 +163,7 @@ export interface ReviewResult {
   claims: ClaimResult[];
   score: number;
   ai: AiDisclosure;
+  imageReport: ImageReport | null;
   dropped: number; // findings rejected by the verifier
   durationMs: number;
 }
@@ -154,6 +189,7 @@ export interface Revision {
   n: number;
   text: string;
   image?: ImageInput | null;
+  imageReport?: ImageReport | null;
   score: number;
   ai: AiDisclosure;
   claims: ClaimResult[];

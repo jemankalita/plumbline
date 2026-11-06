@@ -3,11 +3,12 @@
 // and every AI finding must survive the verifier before a person sees it.
 
 import type { LlmProvider } from "../ai/gemini";
-import type { BrandKit, Finding, ImageInput, Pass, ReviewResult } from "../types";
+import type { AiCall, BrandKit, Finding, ImageInput, ReviewResult } from "../types";
 import { checkClaims } from "./claims";
 import { checkImage, checkTerms, checkTextRules } from "./rules";
 import { redact } from "./text";
 import { breaksIntent, score, verifyAiFindings, type RawAiFinding } from "./verify";
+import { visionPass, visionRules, type VisionResult } from "./vision";
 
 export interface ReviewInput {
   text: string;
@@ -42,13 +43,12 @@ function judgementSystem(kit: BrandKit): string {
   ].join("\n\n");
 }
 
-async function judgementPass(
-  input: ReviewInput,
-  existing: Finding[]
-): Promise<{ findings: Finding[]; dropped: number; error?: string; redacted: number }> {
+type JudgementResult = { findings: Finding[]; dropped: number; error?: string; redacted: number };
+
+async function judgementPass(input: ReviewInput, existing: Finding[]): Promise<JudgementResult> {
   const { provider, kit, text } = input;
   const redaction = redact(text);
-  if (!provider || !kit.rules.some((r) => !r.check)) return { findings: [], dropped: 0, redacted: redaction.count };
+  if (!provider || !text.trim() || !kit.rules.some((r) => !r.check)) return { findings: [], dropped: 0, redacted: redaction.count };
   try {
     const prompt =
       `Channel: ${input.channel ?? "unspecified"}\n` +
@@ -62,19 +62,45 @@ async function judgementPass(
   }
 }
 
-async function draftAltText(provider: LlmProvider, image: ImageInput, kit: BrandKit): Promise<string | null> {
-  const m = image.thumbnail?.match(/^data:(image\/[\w+.-]+);base64,(.+)$/);
-  if (!m) return null;
+async function timed<T>(run: () => Promise<T>): Promise<{ value: T | null; error: string | null; ms: number }> {
+  const t0 = Date.now();
   try {
-    const res = await provider.json<{ alt?: string }>(
-      `Write alt text for a ${kit.name} marketing image. Describe what matters to a screen-reader user in under 20 words, including any visible text. Reply JSON {"alt":""}.`,
-      [{ inlineData: { mimeType: m[1], data: m[2] } }],
-      { timeoutMs: 20000 }
-    );
-    return typeof res.alt === "string" && res.alt.trim() ? res.alt.trim().slice(0, 200) : null;
-  } catch {
-    return null;
+    return { value: await run(), error: null, ms: Date.now() - t0 };
+  } catch (e) {
+    return { value: null, error: e instanceof Error ? e.message : "AI call failed", ms: Date.now() - t0 };
   }
+}
+
+const NO_KEY = "AI is off: this server has no API key.";
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
+
+function judgementCall(input: ReviewInput, ai: JudgementResult, ms: number): AiCall {
+  const skipped = (returned: string): AiCall => ({ pass: "judgement", status: "skipped", model: null, ms: 0, sent: "Nothing", returned });
+  if (!input.provider) return skipped(NO_KEY);
+  if (!input.text.trim()) return skipped("There was no text to judge.");
+  if (!input.kit.rules.some((r) => !r.check)) return skipped("The Brand Kit has no tone or messaging rules.");
+  const sent = `${input.text.length} characters of draft text, with ${plural(ai.redacted, "personal detail")} masked`;
+  if (ai.error) return { pass: "judgement", status: "failed", model: null, ms, sent, returned: ai.error.slice(0, 160) };
+  return { pass: "judgement", status: "ran", model: input.provider.name, ms, sent, returned: `${plural(ai.findings.length, "finding")} kept, ${ai.dropped} rejected by the verifier` };
+}
+
+function imageCall(input: ReviewInput, vision: VisionResult | null, error: string | null, ms: number): AiCall | null {
+  if (!input.image) return null;
+  const skipped = (returned: string): AiCall => ({ pass: "image", status: "skipped", model: null, ms: 0, sent: "Nothing", returned });
+  if (!input.provider) return skipped(NO_KEY);
+  if (!input.image.thumbnail) return skipped("No picture was stored for this image, so colours and alt text were checked by code only.");
+  if (!visionRules(input.kit).length) return skipped("The Brand Kit has no image rules for AI to judge.");
+  const sent = "One small copy of the image, with the kit's image rules";
+  if (error || !vision) return { pass: "image", status: "failed", model: null, ms, sent, returned: (error ?? "No reply").slice(0, 160) };
+  const fails = vision.report.checks.filter((c) => !c.pass).length;
+  return {
+    pass: "image",
+    status: "ran",
+    model: input.provider.name,
+    ms,
+    sent,
+    returned: `${plural(vision.report.checks.length, "rule")} judged, ${fails} failed, ${vision.dropped} rejected by the verifier`,
+  };
 }
 
 export async function runReview(input: ReviewInput): Promise<ReviewResult> {
@@ -86,36 +112,45 @@ export async function runReview(input: ReviewInput): Promise<ReviewResult> {
   const imageFindings = checkImage(input.image, kit);
   const deterministic = [...pass1, ...pass2];
 
-  const needsAlt = !!input.provider && !!input.image && !input.image.altText?.trim();
-  const [ai, alt] = await Promise.all([
-    judgementPass(input, deterministic),
-    needsAlt ? draftAltText(input.provider!, input.image!, kit) : Promise.resolve(null),
+  const wantsVision = !!input.provider && !!input.image?.thumbnail && visionRules(kit).length > 0;
+  const [judged, seen] = await Promise.all([
+    timed(() => judgementPass(input, deterministic)),
+    wantsVision ? timed(() => visionPass(input.provider!, input.image!, kit, input.today)) : Promise.resolve({ value: null, error: null, ms: 0 }),
   ]);
+  const ai: JudgementResult = judged.value ?? { findings: [], dropped: 0, redacted: 0, error: judged.error ?? "AI pass failed" };
+  const vision = seen.value;
 
-  const image = imageFindings.map((f) => {
-    const isAlt = kit.rules.find((r) => r.id === f.cites.id)?.check?.kind === "altText";
-    return alt && isAlt ? { ...f, fix: alt, ai: true } : f;
-  });
+  const altNeeded = !input.image?.altText?.trim();
+  const kindOf = (id: string) => kit.rules.find((r) => r.id === id)?.check?.kind;
+  // Two dominant colours are only an estimate of legibility. When AI has read the actual words, use that.
+  const aiJudgedWords = vision?.report.checks.some((c) => kit.rules.find((r) => r.id === c.ruleId)?.category === "accessibility");
+  const image = imageFindings
+    .filter((f) => !(aiJudgedWords && kindOf(f.cites.id) === "contrast"))
+    .map((f) => {
+      if (kindOf(f.cites.id) !== "altText") return f;
+      return vision?.alt && altNeeded ? { ...f, alt: true, fix: vision.alt, altFix: true, ai: true } : { ...f, alt: true };
+    });
 
-  const findings = [...deterministic, ...ai.findings, ...image]
+  const findings = [...deterministic, ...ai.findings, ...image, ...(vision?.findings ?? [])]
     .map((f) => ({ ...f, fixBreaksIntent: breaksIntent(text, f, input.keyMessage) }))
     .sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity] || a.start - b.start);
 
-  const aiUsed = !!input.provider && !ai.error;
+  const calls = [judgementCall(input, ai, judged.ms), imageCall(input, vision, seen.error, seen.ms)].filter((c): c is AiCall => c !== null);
+  const passes = calls.filter((c) => c.status === "ran").map((c) => c.pass);
+
   const notes: string[] = [];
   if (!input.provider) notes.push("AI pass off (no provider configured). Rules, claims and image checks ran.");
-  if (ai.error) notes.push(`AI pass failed, so only deterministic checks ran (${ai.error.slice(0, 120)}).`);
-  if (aiUsed) notes.push(`Tone and messaging judged by AI against this brand's rules; ${ai.redacted} personal-data item(s) masked first.`);
-  if (alt) notes.push("Alt-text suggestion drafted by AI from a thumbnail.");
-
-  const passes: Pass[] = [...(aiUsed ? (["judgement"] as Pass[]) : []), ...(alt ? (["image"] as Pass[]) : [])];
+  for (const c of calls) if (c.status === "failed") notes.push(`AI pass failed for the ${c.pass === "image" ? "image" : "text"} check, so only plain-code checks stand (${c.returned}).`);
+  if (passes.includes("judgement")) notes.push(`Tone and messaging judged by AI against this brand's rules; ${ai.redacted} personal-data item(s) masked first.`);
+  if (passes.includes("image")) notes.push("AI looked at the image and judged it against the kit's image rules.");
 
   return {
     findings,
     claims,
     score: score(findings),
-    ai: { provider: passes.length ? input.provider!.name : null, passes, note: notes.join(" ") },
-    dropped: ai.dropped,
+    ai: { provider: passes.length ? input.provider!.name : null, passes, note: notes.join(" "), calls },
+    imageReport: vision?.report ?? null,
+    dropped: ai.dropped + (vision?.dropped ?? 0),
     durationMs: Date.now() - t0,
   };
 }

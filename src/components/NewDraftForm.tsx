@@ -4,7 +4,8 @@ import { AnimatePresence, motion } from "motion/react";
 import { Bot, Check, FileUp, ImagePlus, Loader2, Lock, Sparkles, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
-import { dominantColors } from "@/lib/engine/color";
+import { DEMO_IMAGES } from "@/lib/demo-images";
+import { prepareDemoImage, prepareImage } from "@/lib/image-prep";
 import type { ImageInput, Role } from "@/lib/types";
 import { api, Button, Card, cx, ErrorNote, Field, inputCls } from "./ui";
 
@@ -37,7 +38,7 @@ const SAMPLES = [
   },
 ];
 
-const STEPS = ["Rules & terminology", "Claims vs. approved facts", "Tone & messaging (AI)", "Verifier"];
+const STEPS = ["Rules & terminology", "Claims vs. approved facts", "AI: tone and the image", "Verifier"];
 
 export function NewDraftForm({ canSubmit, role }: { canSubmit: boolean; role: Role }) {
   const router = useRouter();
@@ -74,30 +75,18 @@ export function NewDraftForm({ canSubmit, role }: { canSubmit: boolean; role: Ro
 
   async function readImage(file: File) {
     setError(null);
-    if (!/^image\/(png|jpeg|webp)$/.test(file.type)) return setError("Images must be PNG, JPEG or WebP.");
-    if (file.size > 8 * 1024 * 1024) return setError("Images must be 8 MB or smaller.");
     try {
-      const url = URL.createObjectURL(file);
-      const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-        const el = new Image();
-        el.onload = () => resolve(el);
-        el.onerror = () => reject(new Error("Couldn't read that image."));
-        el.src = url;
-      });
-      const draw = (max: number) => {
-        const k = Math.min(1, max / Math.max(img.width, img.height));
-        const c = document.createElement("canvas");
-        c.width = Math.max(1, Math.round(img.width * k));
-        c.height = Math.max(1, Math.round(img.height * k));
-        const ctx = c.getContext("2d")!;
-        ctx.drawImage(img, 0, 0, c.width, c.height);
-        return { c, ctx };
-      };
-      const small = draw(120);
-      const colors = dominantColors(small.ctx.getImageData(0, 0, small.c.width, small.c.height).data, 4);
-      const thumb = draw(480).c.toDataURL("image/jpeg", 0.78);
-      URL.revokeObjectURL(url);
-      setImage({ name: file.name, altText: "", colors, thumbnail: thumb.length < 380_000 ? thumb : null });
+      setImage(await prepareImage(file, file.name));
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+
+  async function pickDemo(src: string, name: string, alt?: string) {
+    setError(null);
+    try {
+      setImage(await prepareDemoImage(src, name, alt));
+      if (!title) setTitle(name.replace(/\.[^.]+$/, "").replace(/-/g, " "));
     } catch (e) {
       setError((e as Error).message);
     }
@@ -106,13 +95,13 @@ export function NewDraftForm({ canSubmit, role }: { canSubmit: boolean; role: Ro
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    if (!text.trim()) return setError("Paste or upload some content first.");
+    if (!text.trim() && !image) return setError("Add some text or an image first.");
     setRunning(true);
     setStep(0);
     const timer = setInterval(() => setStep((s) => Math.min(s + 1, STEPS.length - 1)), 700);
     try {
       const res = await api<{ id: string }>("/api/submissions", {
-        body: { title: title.trim() || "Untitled draft", channel, aiAssisted, keyMessage: keyMessage.trim() || null, text, image },
+        body: { title: title.trim() || image?.name || "Untitled draft", channel, aiAssisted, keyMessage: keyMessage.trim() || null, text, image },
       });
       setStep(STEPS.length);
       router.push(`/s/${res.id}`);
@@ -235,7 +224,8 @@ export function NewDraftForm({ canSubmit, role }: { canSubmit: boolean; role: Ro
         </Card>
 
         <Card className="p-5">
-          <p className="text-[13px] font-medium text-ink">Image (optional)</p>
+          <p className="text-[14px] font-medium text-ink">Image</p>
+          <p className="text-[13px] text-muted">AI checks it against the Brand Kit. You can check an image on its own.</p>
           {image ? (
             <div className="mt-3 grid gap-3">
               <div className="flex gap-3">
@@ -269,15 +259,29 @@ export function NewDraftForm({ canSubmit, role }: { canSubmit: boolean; role: Ro
             >
               <ImagePlus className="size-5" />
               Add a banner or post image
-              <span className="text-[13px] text-muted">Colours are read in your browser. Only a small thumbnail is sent.</span>
+              <span className="text-[13px] text-muted">Colours are read in your browser. Only a small copy is sent.</span>
             </button>
+          )}
+          {!image && (
+            <div className="mt-3">
+              <p className="text-[13px] text-muted">Or try a demo image:</p>
+              <div className="mt-1.5 grid grid-cols-3 gap-1.5">
+                {DEMO_IMAGES.map((d) => (
+                  <button key={d.src} type="button" onClick={() => pickDemo(d.src, d.name, d.alt)} className="rounded-md border border-line bg-white p-1 text-left text-[13px] text-ink transition-colors hover:border-ash-400">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={d.src} alt="" className="aspect-[3/2] w-full rounded-sm object-cover" />
+                    <span className="block truncate px-0.5 pt-1">{d.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
           )}
           <input ref={imgRef} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={(e) => e.target.files?.[0] && readImage(e.target.files[0])} />
         </Card>
 
         <AnimatePresence>{error && <ErrorNote error={error} />}</AnimatePresence>
 
-        <Button type="submit" variant="primary" className="h-12 text-[15px]" loading={running} disabled={!text.trim() || parsing}>
+        <Button type="submit" variant="primary" className="h-12 text-[15px]" loading={running} disabled={(!text.trim() && !image) || parsing}>
           {running ? "Checking…" : "Run the brand check"}
         </Button>
 

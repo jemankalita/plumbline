@@ -1,6 +1,56 @@
 // Demo data: a fictional quick-commerce brand, "QuickKart". Not a real company.
 
-import type { BrandKit, ImageInput } from "../types";
+import type { BrandKit, ImageInput, Rule } from "../types";
+import { DIWALI_IMAGE } from "./demo-image-data";
+
+/** Rules only the AI image pass can judge, because they need someone to look at the picture. */
+export const VISION_RULES: Rule[] = [
+  {
+    id: "R-6.2",
+    section: "6.2",
+    title: "Bright, warm, everyday look",
+    text: "Images feel bright, warm and everyday, with plenty of daylight. No dark, gloomy, blurred or luxury styling.",
+    category: "visual",
+    severity: "warning",
+    check: { kind: "vision" },
+  },
+  {
+    id: "R-6.3",
+    section: "6.3",
+    title: "Show our world",
+    text: "Images show groceries, food, delivery or everyday home life. Nothing unrelated to what QuickKart does.",
+    category: "visual",
+    severity: "warning",
+    check: { kind: "vision" },
+  },
+  {
+    id: "R-6.4",
+    section: "6.4",
+    title: "Clear, correct wordmark",
+    text: "Campaign images carry the QuickKart wordmark, spelled as one word, readable, and not stretched or squeezed.",
+    category: "visual",
+    severity: "warning",
+    check: { kind: "vision" },
+  },
+  {
+    id: "R-6.5",
+    section: "6.5",
+    title: "Show people with respect",
+    text: "If people appear, show them with dignity and without stereotypes. Delivery partners wear helmets on two-wheelers. Pass this rule if no people appear.",
+    category: "visual",
+    severity: "warning",
+    check: { kind: "vision" },
+  },
+  {
+    id: "R-6.6",
+    section: "6.6",
+    title: "Words are easy to read",
+    text: "Any words on an image stand out clearly from what is behind them. Pass this rule if the image has no words.",
+    category: "accessibility",
+    severity: "warning",
+    check: { kind: "vision" },
+  },
+];
 
 export const DEMO_KIT: BrandKit = {
   id: "kit_quickkart",
@@ -136,6 +186,7 @@ export const DEMO_KIT: BrandKit = {
       severity: "warning",
       check: { kind: "palette", maxDistance: 22 },
     },
+    ...VISION_RULES,
   ],
   terms: [
     { id: "T-1", preferred: "QuickKart", banned: ["Quick-Kart", "Quick Kart", "Quickkart", "QuikKart", "Quick Cart"], note: "One word, capital Q and K." },
@@ -214,7 +265,7 @@ export const DEMO_SUBMISSIONS: SeedSubmission[] = [
     status: "in_review",
     daysAgo: 0,
     text: "This Diwali, get the fastest delivery in India with Quick-Kart! Over 2 lakh happy customers trust us. Shop now, guys!!!",
-    image: { name: "diwali-banner.png", altText: "", colors: ["#FFD54A", "#FF9A1F"], thumbnail: null },
+    image: DIWALI_IMAGE,
   },
   {
     title: "Welcome email · new users",

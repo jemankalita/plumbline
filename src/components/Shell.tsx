@@ -7,6 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 import { ROLES } from "@/lib/auth-shared";
 import type { Role } from "@/lib/types";
+import { AiStatus } from "./AiStatus";
 import { api, cx, Logo } from "./ui";
 
 const NAV = [
@@ -55,10 +56,7 @@ export function Shell({ role, status, children }: { role: Role; status: { ai: bo
 
   const footer = (
     <div className="grid gap-2 rounded-lg bg-soot-2 p-3 text-[13px]">
-      <p className="text-[13px] font-medium text-white">System</p>
-      <StatusLine on={status.ai} label={status.ai ? "AI judgement: Gemini" : "AI judgement off"} />
-      <StatusLine on label={status.db === "supabase" ? "Database: Supabase" : "Database: local file"} />
-      <StatusLine on label="Verifier: on" />
+      <AiStatus configured={status.ai} />
     </div>
   );
 
@@ -111,15 +109,6 @@ export function Shell({ role, status, children }: { role: Role; status: { ai: bo
         )}
       </AnimatePresence>
     </div>
-  );
-}
-
-function StatusLine({ on, label }: { on: boolean; label: string }) {
-  return (
-    <span className="flex items-center gap-2 text-ash-300">
-      <span className={cx("size-1.5 rounded-full", on ? "bg-lime" : "bg-ash-600")} aria-hidden />
-      {label}
-    </span>
   );
 }
 
