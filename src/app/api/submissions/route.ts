@@ -1,5 +1,6 @@
+import { clientKey, LIMITS } from "@/lib/rate-limit";
 import { geminiProvider } from "@/lib/ai/gemini";
-import { draftSchema, handle, ok, parseBody, requireContent } from "@/lib/api";
+import { draftSchema, handle, ok, parseBody, enforceLimits, requireContent } from "@/lib/api";
 import { requireRole } from "@/lib/auth";
 import { createSubmission, getKit } from "@/lib/db/repo";
 import { runReview } from "@/lib/engine";
@@ -10,6 +11,7 @@ export const maxDuration = 60;
 export const POST = handle(async (req: Request) => {
   const role = await requireRole("submit");
   const body = await parseBody(req, draftSchema);
+  enforceLimits([`save:${clientKey(req)}`, LIMITS.saveVersion]);
   requireContent(body);
   const kit = await getKit();
   const result = await runReview({

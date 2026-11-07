@@ -1,14 +1,16 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import type { LlmProvider } from "@/lib/ai/gemini";
 import { DEMO_KIT as kit } from "@/lib/db/seed";
 import { runReview } from "@/lib/engine";
-import { imageTextFindings, verifyVision } from "@/lib/engine/vision";
+import { clearVisionCache, imageTextFindings, verifyVision } from "@/lib/engine/vision";
 import type { ImageInput } from "@/lib/types";
 
 const TODAY = new Date("2026-11-05T12:00:00");
 const IMAGE: ImageInput = { name: "post.jpg", altText: "", colors: ["#0B8F5A", "#FFFFFF"], thumbnail: "data:image/jpeg;base64,AAAA" };
 const visionRules = kit.rules.filter((r) => r.check?.kind === "vision");
 const MOOD = visionRules[0];
+
+beforeEach(clearVisionCache);
 
 const replying = (reply: object): LlmProvider => ({ name: "fake", json: async <T,>() => reply as T });
 
@@ -217,5 +219,44 @@ describe("when AI gives no real verdict", () => {
     const reply = { description: "x", visibleText: "", checks: [{ ruleId: MOOD.id, pass: true, note: "Bright", confidence: 1 }] };
     const res = await runReview({ text: "", kit, image: IMAGE, provider: replying(reply), today: TODAY });
     expect(res.imageReport?.verdict).not.toBe("aligned");
+  });
+});
+
+describe("repeat checks and readable words", () => {
+  const allPass = visionRules.map((r) => ({ ruleId: r.id, pass: true, note: "Fine", confidence: 0.9 }));
+
+  it("gives the same verdict for the same image without a second AI call", async () => {
+    let calls = 0;
+    const counting: LlmProvider = {
+      name: "fake",
+      json: async <T,>() => {
+        calls++;
+        return { description: "x", visibleText: "", checks: allPass } as T;
+      },
+    };
+    const first = await runReview({ text: "", kit, image: IMAGE, provider: counting, today: TODAY });
+    const second = await runReview({ text: "", kit, image: IMAGE, provider: counting, today: TODAY });
+    expect(calls).toBe(1);
+    expect(second.imageReport).toEqual(first.imageReport);
+    expect(second.ai.calls.find((c) => c.pass === "image")?.returned).toMatch(/saved result/i);
+  });
+
+  it("fails the words rule by measurement when AI passed low-contrast words", async () => {
+    const reply = { description: "x", visibleText: "SALE", checks: allPass, wordColors: [{ text: "SALE", fg: "#FFD23F", bg: "#FF9A1E" }] };
+    const res = await runReview({ text: "", kit, image: IMAGE, provider: replying(reply), today: TODAY });
+    expect(res.imageReport?.checks.find((c) => c.ruleId === "R-6.6")?.pass).toBe(false);
+    expect(res.findings.find((f) => f.cites.id === "R-6.6")?.message).toMatch(/SALE.*: 1/);
+  });
+
+  it("leaves the words rule passed when the measured contrast is fine", async () => {
+    const reply = { description: "x", visibleText: "SALE", checks: allPass, wordColors: [{ text: "SALE", fg: "#FFFFFF", bg: "#0B3D2E" }] };
+    const res = await runReview({ text: "", kit, image: IMAGE, provider: replying(reply), today: TODAY });
+    expect(res.imageReport?.checks.find((c) => c.ruleId === "R-6.6")?.pass).toBe(true);
+  });
+
+  it("ignores colours that are not real hex values", async () => {
+    const reply = { description: "x", visibleText: "SALE", checks: allPass, wordColors: [{ text: "SALE", fg: "yellow", bg: "#FF9A1E" }] };
+    const res = await runReview({ text: "", kit, image: IMAGE, provider: replying(reply), today: TODAY });
+    expect(res.imageReport?.checks.find((c) => c.ruleId === "R-6.6")?.pass).toBe(true);
   });
 });

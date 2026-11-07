@@ -1,6 +1,7 @@
+import { clientKey, LIMITS } from "@/lib/rate-limit";
 import { z } from "zod";
 import { geminiProvider } from "@/lib/ai/gemini";
-import { handle, imageSchema, NotFound, ok, parseBody, requireContent } from "@/lib/api";
+import { handle, imageSchema, NotFound, ok, parseBody, enforceLimits, requireContent } from "@/lib/api";
 import { requireRole } from "@/lib/auth";
 import { addRevision, getKit, getSubmission } from "@/lib/db/repo";
 import { runReview } from "@/lib/engine";
@@ -18,6 +19,7 @@ export const POST = handle(async (req: Request, ctx: RouteContext<"/api/submissi
   if (!detail) throw new NotFound("Submission not found.");
   const previous = detail.revisions[detail.revisions.length - 1];
   const image = input.image === undefined ? previous?.image ?? null : input.image;
+  enforceLimits([`save:${clientKey(req)}`, LIMITS.saveVersion]);
   requireContent({ text: input.text, image });
   const kit = await getKit();
   const result = await runReview({

@@ -99,7 +99,7 @@ function imageCall(input: ReviewInput, vision: VisionResult | null, error: strin
     model: input.provider.name,
     ms,
     sent,
-    returned: `${plural(vision.report.checks.length, "rule")} judged, ${fails} failed, ${vision.dropped} rejected by the verifier`,
+    returned: `${plural(vision.report.checks.length, "rule")} judged, ${fails} failed, ${vision.dropped} rejected by the verifier${vision.cached ? ". Saved result from an earlier check of this image, so no new AI call" : ""}`,
   };
 }
 

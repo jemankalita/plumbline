@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
 import { can } from "@/lib/auth-shared";
 import type { SubmissionDetail } from "@/lib/db/repo";
+import { score as scoreOf } from "@/lib/engine/verify";
 import { prepareImage } from "@/lib/image-prep";
 import type { FindingRow, FindingStatus, ImageInput, PaletteColor, Role } from "@/lib/types";
 import { applyAccepted, DraftView } from "./DraftView";
@@ -19,9 +20,8 @@ import { api, Button, Card, CLAIM, cx, ErrorNote, Fold, Pill, ScoreRing, scoreTo
 
 type Tab = "todo" | "done";
 
-const WEIGHT = { blocker: 18, warning: 7, suggestion: 2 } as const;
 const isOpen = (f: FindingRow) => f.status === "open" || f.status === "disputed";
-const liveScore = (fs: FindingRow[]) => Math.max(0, 100 - fs.filter(isOpen).reduce((s, f) => s + WEIGHT[f.severity], 0));
+const aiRan = (r?: SubmissionDetail["revisions"][number]) => !!r?.ai.calls?.some((c) => c.status === "ran");
 
 export function ReviewWorkspace({ detail, palette, role }: { detail: SubmissionDetail; palette: PaletteColor[]; role: Role }) {
   const router = useRouter();
@@ -59,7 +59,7 @@ export function ReviewWorkspace({ detail, palette, role }: { detail: SubmissionD
   const textFixes = findings.filter((f) => f.status === "accepted" && f.fix && f.start >= 0).length;
   const altFix = findings.find((f) => f.status === "accepted" && f.altFix && f.fix);
   const unsaved = textFixes + (altFix ? 1 : 0);
-  const score = liveScore(findings);
+  const score = scoreOf(findings);
   const working = useMemo(() => applyAccepted(rev.text, findings), [rev.text, findings]);
   const tone = scoreTone(score);
   const listed = tab === "todo" ? open : findings.filter((f) => !isOpen(f));
@@ -67,6 +67,8 @@ export function ReviewWorkspace({ detail, palette, role }: { detail: SubmissionD
   const inPicture = (f: FindingRow) => f.start < 0 && !f.alt && !f.altFix;
   const cards = listed.filter((f) => !inPicture(f));
   const pictureCards = listed.filter(inPicture);
+  const before = revisions[revisions.length - 2];
+  const firstAiDrop = !!before && rev.score < before.score && aiRan(rev) && !aiRan(before);
   const prev = diffWith != null ? revisions.find((r) => r.n === diffWith) : null;
 
   const select = (id: string) => {
@@ -201,6 +203,15 @@ export function ReviewWorkspace({ detail, palette, role }: { detail: SubmissionD
         }}
         onSwitchRole={switchRole}
       />
+
+      {firstAiDrop && (
+        <p className="flex items-start gap-2 rounded-lg bg-white px-4 py-3 text-[14px] text-ink ring-1 ring-line">
+          <Bot className="mt-0.5 size-4 shrink-0 text-ash-600" aria-hidden />
+          <span>
+            Version {before.n} scored {before.score} on plain-code checks alone. AI has now looked at this version for the first time and found problems code can&apos;t see, so the score dropped to {rev.score}. Your fixes were kept.
+          </span>
+        </p>
+      )}
 
       <AnimatePresence>{error && <ErrorNote error={error} />}</AnimatePresence>
 

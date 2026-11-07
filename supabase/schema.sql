@@ -129,3 +129,9 @@ alter table submissions enable row level security;
 alter table revisions enable row level security;
 alter table findings enable row level security;
 alter table audit enable row level security;
+
+-- Image checks (safe to run on an existing project)
+alter table kits add column if not exists "imageRulesAdded" boolean not null default false;
+alter table revisions add column if not exists "imageReport" jsonb;
+alter table findings add column if not exists "altFix" boolean;
+alter table findings add column if not exists "alt" boolean;

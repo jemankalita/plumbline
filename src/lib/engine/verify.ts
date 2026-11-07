@@ -93,10 +93,16 @@ export function breaksIntent(text: string, f: Pick<Finding, "start" | "end" | "f
 
 const WEIGHT: Record<Severity, number> = { blocker: 18, warning: 7, suggestion: 2 };
 
-/** Brand score 0–100 over findings that are still open. */
-export function score(findings: Pick<Finding, "severity" | "status">[]): number {
-  const penalty = findings
+type Scored = Pick<Finding, "severity" | "status"> & { cites?: { id: string } };
+
+/** Brand score 0–100 over open findings. A rule broken in several places costs once, at its worst. */
+export function score(findings: Scored[]): number {
+  const worst = new Map<string, number>();
+  findings
     .filter((f) => f.status === "open" || f.status === "disputed")
-    .reduce((s, f) => s + WEIGHT[f.severity], 0);
-  return Math.max(0, 100 - penalty);
+    .forEach((f, i) => {
+      const key = f.cites?.id ?? `finding-${i}`;
+      worst.set(key, Math.max(worst.get(key) ?? 0, WEIGHT[f.severity]));
+    });
+  return Math.max(0, 100 - [...worst.values()].reduce((s, w) => s + w, 0));
 }

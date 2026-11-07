@@ -211,3 +211,15 @@ describe("runReview", () => {
     expect(res.findings.length).toBeGreaterThan(0);
   });
 });
+
+describe("score", () => {
+  const hit = (id: string, severity: "blocker" | "warning") => ({ severity, status: "open" as const, cites: { id } });
+
+  it("counts a rule broken in two places once, at its worst severity", () => {
+    expect(score([hit("R-4.2", "blocker"), hit("R-4.2", "warning")])).toBe(82);
+  });
+
+  it("still counts different rules separately", () => {
+    expect(score([hit("R-4.2", "blocker"), hit("R-1.4", "warning")])).toBe(75);
+  });
+});

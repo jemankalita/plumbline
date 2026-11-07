@@ -5,6 +5,7 @@
 import type { LlmProvider } from "../ai/gemini";
 import type { BrandKit, Finding, ImageCheck, ImageInput, ImageReport, ImageVerdict, Rule } from "../types";
 import { checkClaims } from "./claims";
+import { contrast, hexToRgb } from "./color";
 import { checkTerms, checkTextRules } from "./rules";
 import { uid } from "./text";
 import { REVIEW_THRESHOLD } from "./verify";
@@ -21,6 +22,7 @@ export interface RawVision {
   visibleText?: unknown;
   alt?: unknown;
   checks?: unknown;
+  wordColors?: unknown;
 }
 
 const NOTE_MAX = 300;
@@ -28,6 +30,10 @@ const TEXT_MAX = 600;
 const ALT_MAX = 200;
 const VISION_TIMEOUT_MS = 25000;
 const DEFAULT_CONFIDENCE = 0.5;
+const WORDS_MIN_CONTRAST = 3; // WCAG's limit for large text, which words on an image usually are
+const MEASURED_CONFIDENCE = 0.9;
+const CACHE_LIMIT = 50;
+const CACHE_MS = 60 * 60 * 1000;
 
 const clean = (v: unknown, max: number): string => (typeof v === "string" ? v.trim().slice(0, max) : "");
 
@@ -47,8 +53,9 @@ function visionSystem(kit: BrandKit): string {
     "`description`: one plain sentence about what the image shows.",
     "`visibleText`: every word readable in the image, exactly as written, including spelling mistakes. Empty string if none.",
     "`alt`: alt text under 20 words that includes any visible text.",
+    "`wordColors`: for each separate block of words, its `text`, the `fg` hex colour of the letters and the `bg` hex colour directly behind them. Empty array if there are no words.",
     "`checks`: one entry per rule. `pass` true or false. `note` says what you can actually see that led to this, in one short sentence. `confidence` 0-1.",
-    'Reply with JSON only: {"description":"","visibleText":"","alt":"","checks":[{"ruleId":"","pass":true,"note":"","confidence":0.8}]}',
+    'Reply with JSON only: {"description":"","visibleText":"","alt":"","wordColors":[{"text":"","fg":"#000000","bg":"#FFFFFF"}],"checks":[{"ruleId":"","pass":true,"note":"","confidence":0.8}]}',
   ].join("\n\n");
 }
 
@@ -107,6 +114,43 @@ export function imageTextFindings(visibleText: string, kit: BrandKit, today?: Da
     .map((f) => ({ ...f, id: uid(), pass: "image" as const, start: -1, end: -1, quote: `Text on the image: “${f.quote}”`, ai: true }));
 }
 
+/** AI only names the colours. Code measures them, so a pass on the words rule can be overturned. */
+function measureWords(raw: RawVision | null, report: ImageReport, findings: Finding[], kit: BrandKit): { report: ImageReport; findings: Finding[] } {
+  const rule = visionRules(kit).find((r) => r.category === "accessibility");
+  const check = report.checks.find((c) => c.ruleId === rule?.id);
+  if (!rule || !check?.pass || !Array.isArray(raw?.wordColors)) return { report, findings };
+  const worst = (raw.wordColors as { text?: unknown; fg?: unknown; bg?: unknown }[])
+    .map((w) => ({ text: clean(w?.text, 60), fg: hexToRgb(clean(w?.fg, 7)), bg: hexToRgb(clean(w?.bg, 7)) }))
+    .flatMap((w) => (w.fg && w.bg ? [{ text: w.text, ratio: contrast(w.fg, w.bg) }] : []))
+    .sort((a, b) => a.ratio - b.ratio)[0];
+  if (!worst || worst.ratio >= WORDS_MIN_CONTRAST) return { report, findings };
+
+  const note = `“${worst.text}” measures ${worst.ratio.toFixed(1)} : 1 against its background (needs ${WORDS_MIN_CONTRAST} : 1).`;
+  const label = `Rule ${rule.section}`;
+  return {
+    report: { ...report, checks: report.checks.map((c) => (c === check ? { ...c, pass: false, note, confidence: MEASURED_CONFIDENCE } : c)) },
+    findings: [
+      ...findings,
+      {
+        id: uid(),
+        pass: "image",
+        type: rule.category,
+        severity: rule.severity,
+        start: -1,
+        end: -1,
+        quote: rule.title,
+        message: note,
+        cites: { kind: "rule", id: rule.id, label, excerpt: rule.text },
+        fix: null,
+        confidence: MEASURED_CONFIDENCE,
+        needsReview: false,
+        ai: true,
+        status: "open",
+      },
+    ],
+  };
+}
+
 export const verdictFor = (problems: number): ImageVerdict => (problems === 0 ? "aligned" : problems === 1 ? "partly" : "off");
 
 export interface VisionResult {
@@ -114,13 +158,42 @@ export interface VisionResult {
   findings: Finding[];
   alt: string | null;
   dropped: number;
+  cached: boolean;
+}
+
+type CachedReply = { at: number; raw: RawVision };
+const CACHE_SLOT = Symbol.for("plumbline.visionCache");
+const slots = globalThis as unknown as Record<symbol, Map<string, CachedReply> | undefined>;
+const replies = (): Map<string, CachedReply> => (slots[CACHE_SLOT] ??= new Map());
+
+export const clearVisionCache = () => replies().clear();
+
+function hash(text: string): string {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 0x01000193);
+  return (h >>> 0).toString(36);
+}
+
+/** The same picture against the same rules keeps its verdict, and costs no extra quota. */
+async function askOnce(provider: LlmProvider, system: string, mimeType: string, data: string): Promise<{ raw: RawVision; cached: boolean }> {
+  const key = `${hash(system)}:${hash(data)}:${data.length}`;
+  const hit = replies().get(key);
+  if (hit && Date.now() - hit.at < CACHE_MS) return { raw: hit.raw, cached: true };
+  const raw = await provider.json<RawVision>(system, [{ inlineData: { mimeType, data } }], { timeoutMs: VISION_TIMEOUT_MS });
+  if (Array.isArray(raw?.checks) && raw.checks.length) {
+    if (replies().size >= CACHE_LIMIT) replies().delete(replies().keys().next().value as string);
+    replies().set(key, { at: Date.now(), raw });
+  }
+  return { raw, cached: false };
 }
 
 export async function visionPass(provider: LlmProvider, image: ImageInput, kit: BrandKit, today?: Date): Promise<VisionResult> {
   const m = image.thumbnail?.match(/^data:(image\/[\w+.-]+);base64,(.+)$/);
   if (!m) throw new Error("No image data to send");
-  const raw = await provider.json<RawVision>(visionSystem(kit), [{ inlineData: { mimeType: m[1], data: m[2] } }], { timeoutMs: VISION_TIMEOUT_MS });
-  const { report, findings, dropped } = verifyVision(raw, kit);
+  const { raw, cached } = await askOnce(provider, visionSystem(kit), m[1], m[2]);
+  const verified = verifyVision(raw, kit);
+  const { dropped } = verified;
+  const { report, findings } = measureWords(raw, verified.report, verified.findings, kit);
   // No verdicts is a failed check, never a pass. A skipped rule counts against the image.
   if (!report.checks.length) throw new Error("AI returned no usable image checks");
   const unjudged = visionRules(kit).length - report.checks.length;
@@ -133,5 +206,6 @@ export async function visionPass(provider: LlmProvider, image: ImageInput, kit: 
     findings: [...opinions, ...textFindings],
     alt: clean(raw?.alt, ALT_MAX) || null,
     dropped,
+    cached,
   };
 }

@@ -39,6 +39,8 @@ export function parseJson<T>(raw: string): T {
 
 let workingModel: string | null = null;
 
+const SEED = 7; // with temperature 0, keeps repeat checks as steady as the model allows
+
 // Overload, rate-limit and server errors are worth trying on the next model; bad requests are not.
 const RETRYABLE = new Set([404, 429, 500, 502, 503, 504]);
 
@@ -59,7 +61,7 @@ export function geminiProvider(): LlmProvider | null {
           body: JSON.stringify({
             systemInstruction: { parts: [{ text: system }] },
             contents: [{ role: "user", parts }],
-            generationConfig: { responseMimeType: "application/json", temperature: 0.2 },
+            generationConfig: { responseMimeType: "application/json", temperature: 0, seed: SEED },
           }),
           signal: AbortSignal.timeout(opts?.timeoutMs ?? 18000),
         }).catch((e: unknown) => {

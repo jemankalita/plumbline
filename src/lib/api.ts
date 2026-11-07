@@ -1,3 +1,4 @@
+import { checkLimit, type LimitRule } from "./rate-limit";
 // Shared helpers for route handlers: one error envelope, schema validation, role checks.
 
 import { z } from "zod";
@@ -29,6 +30,14 @@ export async function parseBody<T extends z.ZodType>(req: Request, schema: T): P
 
 export class BadRequest extends Error {}
 export class NotFound extends Error {}
+export class TooManyRequests extends Error {}
+
+const BUSY = "That's a lot of checks in a short time. Please wait a few minutes and try again.";
+
+/** Throws a friendly 429 when any of the given limits is used up. */
+export function enforceLimits(...checks: [key: string, rule: LimitRule][]) {
+  if (!checks.every(([key, rule]) => checkLimit(key, rule))) throw new TooManyRequests(BUSY);
+}
 
 /** Wrap a handler so every error becomes a clean JSON response, never a stack trace. */
 export function handle<A extends unknown[]>(fn: (...args: A) => Promise<Response>) {
@@ -40,6 +49,7 @@ export function handle<A extends unknown[]>(fn: (...args: A) => Promise<Response
       if (e instanceof ForbiddenError) return fail(403, e.message);
       if (e instanceof NotFound) return fail(404, e.message);
       if (e instanceof ConflictError) return fail(409, e.message);
+      if (e instanceof TooManyRequests) return fail(429, e.message);
       console.error("[plumbline] unhandled", e);
       return fail(500, "Something went wrong on our side. Please try again.");
     }

@@ -48,6 +48,9 @@ How trust is built into the design:
 - **Emails, phone numbers and ID numbers are masked** before any AI call, and offsets are mapped back afterwards.
 - **Images get a small copy, not the original.** Dominant colours are computed on a canvas in the browser. A resized copy goes to Gemini, which judges it against the kit's image rules and reads any words on it. Code then checks those words for wrong names and unproven claims.
 - **An AI opinion about a picture never blocks on its own.** Each verdict must cite a real image rule and give a reason. If the AI returns no usable verdicts, the check is shown as failed, never as a pass.
+- **Code has the last word on readable words.** AI names the colours of words on an image, and code measures their contrast.
+- **Repeat checks stay steady.** Calls run at temperature 0 with a fixed seed, and the same image against the same rules reuses its saved result for an hour.
+- **Public checks are limited.** `/api/review` allows 12 checks per client every 10 minutes and 300 a day in total. Saving versions allows 30 per client every 10 minutes. Counts are per server process, so they are approximate on a multi-instance host.
 - **Every check discloses its AI use:** the provider, which passes used it, and how many AI findings the verifier dropped.
 
 ## Run locally
@@ -67,6 +70,8 @@ With no environment variables, the app uses a local JSON database (`.data/plumbl
 3. Set `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` (server-only).
 
 The demo brand seeds itself on first request.
+
+**Hosting note:** without Supabase, data lives in a local JSON file. That works on a single server. On Vercel the file sits in `/tmp`, which isn't shared between instances, so a hosted deployment should set the Supabase variables above.
 
 ### Tests
 
