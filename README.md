@@ -104,7 +104,3 @@ All three photographs are CC0. The brand text on the banners was added for this 
 - "Free closeup fresh vegetables table" via [rawpixel](https://www.rawpixel.com/image/5927583/photo-image-public-domain-plant-fruit)
 - "A platter brimming with oil lamps, during the Diwali evening." by Hemant Kumar Chhapoliya, via WordPress Photo Directory
 - "(flou) The Collection Cars (1)" by Mathious Ier, via Wikimedia Commons
-
-## Disclosure
-
-AI coding assistance was used during development. In the product, Google Gemini is used only for the judgement pass, alt-text drafts and guideline import, and each use is shown in the UI.
