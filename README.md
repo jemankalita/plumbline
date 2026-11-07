@@ -6,7 +6,7 @@
 
 Team **Diet Code** (Jeman Kalita, Krishnesha Sarma). Problem statement by Inkloom AI. Round 2: functional product.
 
-- **Live app:** _add the Vercel URL here_
+- **Live app:** https://plumbline-opal.vercel.app
 - **Demo brand:** "QuickKart", a fictional quick-commerce company. It is not a real business.
 
 ---
