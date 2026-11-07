@@ -21,7 +21,7 @@ export class LlmError extends Error {
 
 function candidates(): string[] {
   const preferred = process.env.GEMINI_MODEL?.trim();
-  return [...new Set([preferred, "gemini-2.5-flash", "gemini-flash-latest", "gemini-3.1-flash-lite"].filter(Boolean) as string[])];
+  return [...new Set([preferred, "gemini-3.1-flash-lite", "gemini-2.5-flash", "gemini-flash-latest"].filter(Boolean) as string[])];
 }
 
 /** Strip code fences and parse the first JSON value in a model reply. */
@@ -76,9 +76,13 @@ export function geminiProvider(): LlmProvider | null {
           if (RETRYABLE.has(res.status)) continue;
           throw lastError;
         }
-        const data = (await res.json()) as {
+        const data = (await res.json().catch((e: unknown) => {
+          lastError = e; // a stalled reply should fall through to the next model
+          return null;
+        })) as {
           candidates?: { content?: { parts?: { text?: string }[] } }[];
-        };
+        } | null;
+        if (!data) continue;
         const text = data.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("") ?? "";
         workingModel = model;
         return parseJson<T>(text);

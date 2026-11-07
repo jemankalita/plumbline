@@ -1,5 +1,7 @@
 # Plumbline
 
+**Live product:** https://plumbline-opal.vercel.app
+
 **Brand governance that works before you hit publish.** Plumbline checks captions, emails, web copy and banners against an organisation's brand guidelines and its register of approved facts. Every finding cites the exact rule or fact it breaks and suggests a fix that keeps the writer's message. A person makes every decision.
 
 Team **Diet Code** (Jeman Kalita, Krishnesha Sarma). Problem statement by Inkloom AI. Round 2: functional product.
@@ -104,3 +106,7 @@ All three photographs are CC0. The brand text on the banners was added for this 
 - "Free closeup fresh vegetables table" via [rawpixel](https://www.rawpixel.com/image/5927583/photo-image-public-domain-plant-fruit)
 - "A platter brimming with oil lamps, during the Diwali evening." by Hemant Kumar Chhapoliya, via WordPress Photo Directory
 - "(flou) The Collection Cars (1)" by Mathious Ier, via Wikimedia Commons
+
+## AI tools
+
+Claude Code was used as a coding assistant during development. Google Gemini runs inside the product for tone checks, image checks, alt text and guideline import.
