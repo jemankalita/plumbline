@@ -1,13 +1,16 @@
 import { ArrowRight, Bot, PenLine, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { QueueList } from "@/components/QueueList";
-import { currentRole } from "@/lib/auth";
+import { currentSession } from "@/lib/auth";
 import { listSubmissions } from "@/lib/db/repo";
+import { ORGS } from "@/lib/auth-shared";
+import { FirstRun } from "@/components/FirstRun";
 
 export const metadata = { title: "Review queue" };
 
 export default async function QueuePage(props: { searchParams: Promise<{ view?: string }> }) {
-  const [{ view }, role, subs] = await Promise.all([props.searchParams, currentRole(), listSubmissions()]);
+  const { kitId, role } = await currentSession();
+  const [{ view }, subs] = await Promise.all([props.searchParams, listSubmissions(kitId)]);
 
   const needsMe = subs.filter((s) => {
     if (role === "creator") return s.status === "draft" || s.status === "changes_requested";
@@ -34,9 +37,10 @@ export default async function QueuePage(props: { searchParams: Promise<{ view?: 
 
   return (
     <div className="grid gap-8">
+      <FirstRun firstDraftId={subs.find((s) => s.blockers > 0)?.id ?? null} />
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="kicker">Workspace · QuickKart (demo brand)</p>
+          <p className="kicker">Workspace · {ORGS.find((o) => o.id === kitId)?.name ?? "Your brand"} (demo brand)</p>
           <h1 className="mt-1 text-[30px] font-semibold leading-tight tracking-[-0.03em] text-ink">Review queue</h1>
           <p className="mt-2 max-w-xl text-[15px] text-muted">Every draft is checked against the Brand Kit before a person sees it. {hint}</p>
         </div>

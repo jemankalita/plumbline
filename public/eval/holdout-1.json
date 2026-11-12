@@ -1,0 +1,670 @@
+{
+  "version": "holdout-1",
+  "split": "holdout",
+  "model": "Google Gemini · gemini-3.1-flash-lite",
+  "seed": 2202,
+  "posts": {
+    "total": 60,
+    "scored": 60,
+    "excludedForAiFailure": 0
+  },
+  "calls": {
+    "live": 150,
+    "cached": 0,
+    "failed": 0
+  },
+  "overall": {
+    "plumbline": {
+      "strict": {
+        "tally": {
+          "tp": 116,
+          "fp": 42,
+          "fn": 47
+        },
+        "precision": {
+          "value": 0.7341772151898734,
+          "low": 0.6603295484758868,
+          "high": 0.7969076513540704
+        },
+        "recall": {
+          "value": 0.7116564417177914,
+          "low": 0.6378728359967396,
+          "high": 0.7756930852123594
+        }
+      },
+      "lenient": {
+        "tally": {
+          "tp": 125,
+          "fp": 33,
+          "fn": 38
+        },
+        "precision": {
+          "value": 0.7911392405063291,
+          "low": 0.7212207825183736,
+          "high": 0.8472362767296813
+        },
+        "recall": {
+          "value": 0.7668711656441718,
+          "low": 0.6962729426384466,
+          "high": 0.8251797406251999
+        }
+      }
+    },
+    "rulesOnly": {
+      "strict": {
+        "tally": {
+          "tp": 108,
+          "fp": 19,
+          "fn": 55
+        },
+        "precision": {
+          "value": 0.8503937007874016,
+          "low": 0.7781282329516654,
+          "high": 0.9020835651309016
+        },
+        "recall": {
+          "value": 0.6625766871165644,
+          "low": 0.5869877471283148,
+          "high": 0.7306788300322974
+        }
+      },
+      "lenient": {
+        "tally": {
+          "tp": 116,
+          "fp": 11,
+          "fn": 47
+        },
+        "precision": {
+          "value": 0.9133858267716536,
+          "low": 0.8515484151644752,
+          "high": 0.9509486499891151
+        },
+        "recall": {
+          "value": 0.7116564417177914,
+          "low": 0.6378728359967396,
+          "high": 0.7756930852123594
+        }
+      }
+    },
+    "noVerifier": {
+      "strict": {
+        "tally": {
+          "tp": 130,
+          "fp": 80,
+          "fn": 33
+        },
+        "precision": {
+          "value": 0.6190476190476191,
+          "low": 0.5517848761057891,
+          "high": 0.6820330526788816
+        },
+        "recall": {
+          "value": 0.7975460122699386,
+          "low": 0.7293371573853826,
+          "high": 0.852052615908568
+        }
+      },
+      "lenient": {
+        "tally": {
+          "tp": 144,
+          "fp": 66,
+          "fn": 19
+        },
+        "precision": {
+          "value": 0.6857142857142857,
+          "low": 0.6200666140902598,
+          "high": 0.7446893548138263
+        },
+        "recall": {
+          "value": 0.8834355828220859,
+          "low": 0.8251190294784104,
+          "high": 0.924094595900392
+        }
+      }
+    },
+    "plainGemini": {
+      "strict": {
+        "tally": {
+          "tp": 24,
+          "fp": 110,
+          "fn": 139
+        },
+        "precision": {
+          "value": 0.1791044776119403,
+          "low": 0.12341376272345232,
+          "high": 0.25268169757300385
+        },
+        "recall": {
+          "value": 0.147239263803681,
+          "low": 0.10098301731863049,
+          "high": 0.2097404473328713
+        }
+      },
+      "lenient": {
+        "tally": {
+          "tp": 28,
+          "fp": 106,
+          "fn": 135
+        },
+        "precision": {
+          "value": 0.208955223880597,
+          "low": 0.14871120011463207,
+          "high": 0.2854218917821538
+        },
+        "recall": {
+          "value": 0.17177914110429449,
+          "low": 0.12160470906368634,
+          "high": 0.23706842761205885
+        }
+      }
+    }
+  },
+  "checks": [
+    {
+      "id": "gv-ampersand",
+      "name": "Use 'and', not an ampersand",
+      "alpha": null,
+      "knownTruth": 30,
+      "badge": "Measured",
+      "tally": {
+        "tp": 0,
+        "fp": 1,
+        "fn": 0
+      },
+      "precision": {
+        "value": 0,
+        "low": 0,
+        "high": 0.7934567085261071
+      },
+      "recall": {
+        "value": null,
+        "low": null,
+        "high": null
+      }
+    },
+    {
+      "id": "gv-in-order-to",
+      "name": "Remove 'in order to'",
+      "alpha": null,
+      "knownTruth": 30,
+      "badge": "Measured",
+      "tally": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 0
+      },
+      "precision": {
+        "value": null,
+        "low": null,
+        "high": null
+      },
+      "recall": {
+        "value": null,
+        "low": null,
+        "high": null
+      }
+    },
+    {
+      "id": "gv-please",
+      "name": "Avoid 'please'",
+      "alpha": null,
+      "knownTruth": 30,
+      "badge": "Measured",
+      "tally": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 0
+      },
+      "precision": {
+        "value": null,
+        "low": null,
+        "high": null
+      },
+      "recall": {
+        "value": null,
+        "low": null,
+        "high": null
+      }
+    },
+    {
+      "id": "gv-ordinal-date",
+      "name": "No ordinal numbers in dates",
+      "alpha": null,
+      "knownTruth": 30,
+      "badge": "Measured",
+      "tally": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 0
+      },
+      "precision": {
+        "value": null,
+        "low": null,
+        "high": null
+      },
+      "recall": {
+        "value": null,
+        "low": null,
+        "high": null
+      }
+    },
+    {
+      "id": "gv-range-hyphen",
+      "name": "Use 'to' in ranges",
+      "alpha": 1,
+      "knownTruth": 30,
+      "badge": "Measured",
+      "tally": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0
+      },
+      "precision": {
+        "value": 1,
+        "low": 0.20654329147389294,
+        "high": 1
+      },
+      "recall": {
+        "value": 1,
+        "low": 0.20654329147389294,
+        "high": 1
+      }
+    },
+    {
+      "id": "gv-eg-etc-ie",
+      "name": "Avoid eg, etc and ie",
+      "alpha": null,
+      "knownTruth": 30,
+      "badge": "Measured",
+      "tally": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 0
+      },
+      "precision": {
+        "value": null,
+        "low": null,
+        "high": null
+      },
+      "recall": {
+        "value": null,
+        "low": null,
+        "high": null
+      }
+    },
+    {
+      "id": "gv-contraction",
+      "name": "Avoid negative and complex contractions",
+      "alpha": 1,
+      "knownTruth": 30,
+      "badge": "Measured",
+      "tally": {
+        "tp": 1,
+        "fp": 0,
+        "fn": 0
+      },
+      "precision": {
+        "value": 1,
+        "low": 0.20654329147389294,
+        "high": 1
+      },
+      "recall": {
+        "value": 1,
+        "low": 0.20654329147389294,
+        "high": 1
+      }
+    },
+    {
+      "id": "gv-click",
+      "name": "Say 'select', not 'click'",
+      "alpha": null,
+      "knownTruth": 30,
+      "badge": "Measured",
+      "tally": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 0
+      },
+      "precision": {
+        "value": null,
+        "low": null,
+        "high": null
+      },
+      "recall": {
+        "value": null,
+        "low": null,
+        "high": null
+      }
+    },
+    {
+      "id": "gv-money-decimals",
+      "name": "No decimals on whole pounds",
+      "alpha": null,
+      "knownTruth": 30,
+      "badge": "Measured",
+      "tally": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 0
+      },
+      "precision": {
+        "value": null,
+        "low": null,
+        "high": null
+      },
+      "recall": {
+        "value": null,
+        "low": null,
+        "high": null
+      }
+    },
+    {
+      "id": "gv-thousands-comma",
+      "name": "Comma in numbers over 999",
+      "alpha": null,
+      "knownTruth": 30,
+      "badge": "Measured",
+      "tally": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 0
+      },
+      "precision": {
+        "value": null,
+        "low": null,
+        "high": null
+      },
+      "recall": {
+        "value": null,
+        "low": null,
+        "high": null
+      }
+    },
+    {
+      "id": "gv-per-cent",
+      "name": "Use the % sign",
+      "alpha": null,
+      "knownTruth": 30,
+      "badge": "Measured",
+      "tally": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 0
+      },
+      "precision": {
+        "value": null,
+        "low": null,
+        "high": null
+      },
+      "recall": {
+        "value": null,
+        "low": null,
+        "high": null
+      }
+    },
+    {
+      "id": "gv-small-numbers",
+      "name": "Use numerals for 2 to 9",
+      "alpha": 0.933,
+      "knownTruth": 30,
+      "badge": "Measured",
+      "tally": {
+        "tp": 13,
+        "fp": 3,
+        "fn": 2
+      },
+      "precision": {
+        "value": 0.8125,
+        "low": 0.5699064013154177,
+        "high": 0.9340852122641324
+      },
+      "recall": {
+        "value": 0.8666666666666667,
+        "low": 0.6211750079348376,
+        "high": 0.9626395301086407
+      }
+    },
+    {
+      "id": "gv-age-groups",
+      "name": "Say who is included by age",
+      "alpha": null,
+      "knownTruth": 30,
+      "badge": "Measured",
+      "tally": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 0
+      },
+      "precision": {
+        "value": null,
+        "low": null,
+        "high": null
+      },
+      "recall": {
+        "value": null,
+        "low": null,
+        "high": null
+      }
+    },
+    {
+      "id": "gv-today-date",
+      "name": "Give the date with 'today'",
+      "alpha": 0.907,
+      "knownTruth": 30,
+      "badge": "Measured",
+      "tally": {
+        "tp": 5,
+        "fp": 2,
+        "fn": 0
+      },
+      "precision": {
+        "value": 0.7142857142857143,
+        "low": 0.35892909014821267,
+        "high": 0.9177828342909844
+      },
+      "recall": {
+        "value": 1,
+        "low": 0.5655085052479191,
+        "high": 1
+      }
+    },
+    {
+      "id": "gv-sentence-length",
+      "name": "Keep sentences short",
+      "alpha": 0.959,
+      "knownTruth": 30,
+      "badge": "Measured",
+      "tally": {
+        "tp": 73,
+        "fp": 0,
+        "fn": 0
+      },
+      "precision": {
+        "value": 1,
+        "low": 0.950006246616416,
+        "high": 0.9999999999999999
+      },
+      "recall": {
+        "value": 1,
+        "low": 0.950006246616416,
+        "high": 0.9999999999999999
+      }
+    },
+    {
+      "id": "gv-active-voice",
+      "name": "Use the active voice",
+      "alpha": 0.703,
+      "knownTruth": 30,
+      "badge": "Measured",
+      "tally": {
+        "tp": 8,
+        "fp": 21,
+        "fn": 25
+      },
+      "precision": {
+        "value": 0.27586206896551724,
+        "low": 0.1469858133850274,
+        "high": 0.4571747634443597
+      },
+      "recall": {
+        "value": 0.24242424242424243,
+        "low": 0.12831561346647294,
+        "high": 0.4102494868549029
+      }
+    },
+    {
+      "id": "gv-abbreviations",
+      "name": "Explain abbreviations on first use",
+      "alpha": 0.741,
+      "knownTruth": 30,
+      "badge": "Measured",
+      "tally": {
+        "tp": 0,
+        "fp": 2,
+        "fn": 12
+      },
+      "precision": {
+        "value": 0,
+        "low": 0,
+        "high": 0.6576280471103807
+      },
+      "recall": {
+        "value": 0,
+        "low": 0,
+        "high": 0.2425007574992425
+      }
+    },
+    {
+      "id": "gv-metaphor",
+      "name": "Avoid metaphors",
+      "alpha": 0.576,
+      "knownTruth": 30,
+      "badge": "Measured",
+      "tally": {
+        "tp": 7,
+        "fp": 9,
+        "fn": 6
+      },
+      "precision": {
+        "value": 0.4375,
+        "low": 0.2309836333518552,
+        "high": 0.6682180439322347
+      },
+      "recall": {
+        "value": 0.5384615384615384,
+        "low": 0.2914343243183205,
+        "high": 0.7679424569851186
+      }
+    },
+    {
+      "id": "gv-uk-english",
+      "name": "Use UK English",
+      "alpha": 1,
+      "knownTruth": 30,
+      "badge": "Measured",
+      "tally": {
+        "tp": 0,
+        "fp": 0,
+        "fn": 1
+      },
+      "precision": {
+        "value": null,
+        "low": null,
+        "high": null
+      },
+      "recall": {
+        "value": 0,
+        "low": 0,
+        "high": 0.7934567085261071
+      }
+    },
+    {
+      "id": "gv-plain-english",
+      "name": "Write in plain English",
+      "alpha": 0.497,
+      "knownTruth": 30,
+      "badge": "Measured",
+      "tally": {
+        "tp": 0,
+        "fp": 6,
+        "fn": 3
+      },
+      "precision": {
+        "value": 0,
+        "low": 0,
+        "high": 0.3903430336530645
+      },
+      "recall": {
+        "value": 0,
+        "low": 0,
+        "high": 0.5615060804490177
+      }
+    },
+    {
+      "id": "gv-t-all",
+      "name": "Banned terms, all together",
+      "alpha": 0.959,
+      "knownTruth": 35,
+      "badge": "Measured",
+      "tally": {
+        "tp": 15,
+        "fp": 13,
+        "fn": 7
+      },
+      "precision": {
+        "value": 0.5357142857142857,
+        "low": 0.3581239514210167,
+        "high": 0.7046869626034041
+      },
+      "recall": {
+        "value": 0.6818181818181818,
+        "low": 0.47318222782839336,
+        "high": 0.8363961264530752
+      }
+    }
+  ],
+  "seeded": {
+    "code": {
+      "tally": {
+        "tp": 485,
+        "fp": 1,
+        "fn": 0
+      },
+      "precision": {
+        "value": 0.9979423868312757,
+        "low": 0.9884378145397421,
+        "high": 0.9996366977107485
+      },
+      "recall": {
+        "value": 1,
+        "low": 0.9921414216793335,
+        "high": 1
+      }
+    },
+    "ai": {
+      "tally": {
+        "tp": 87,
+        "fp": 51,
+        "fn": 63
+      },
+      "precision": {
+        "value": 0.6304347826086957,
+        "low": 0.5473871480047701,
+        "high": 0.7064170956021831
+      },
+      "recall": {
+        "value": 0.58,
+        "low": 0.49998333511352705,
+        "high": 0.656021282623158
+      }
+    },
+    "aiDocuments": 30
+  },
+  "limits": [
+    "Reference labels were made by two AI labellers and an AI adjudicator, not people.",
+    "The adjudicator confirmed or left ambiguous every disputed label and rejected none, so it may lean towards confirming.",
+    "The posts are UK government news, not brand social posts.",
+    "The AI step reports at most 6 findings per draft, which limits recall on long posts.",
+    "Overall scores leave out checks where the two labellers disagreed too much to trust the labels."
+  ]
+}

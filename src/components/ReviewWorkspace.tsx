@@ -2,15 +2,17 @@
 
 import { diffWords } from "diff";
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowLeft, Bot, CheckCircle2, ImageUp, PencilLine, RefreshCw, Undo2 } from "lucide-react";
+import { ArrowLeft, Bot, CheckCircle2, PencilLine, RefreshCw, Undo2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { VideoSummary } from "./review/VideoSummary";
 import { useMemo, useRef, useState } from "react";
+import { tidyDetail } from "@/lib/audit-labels";
 import { can } from "@/lib/auth-shared";
 import type { SubmissionDetail } from "@/lib/db/repo";
 import { score as scoreOf } from "@/lib/engine/verify";
 import { prepareImage } from "@/lib/image-prep";
-import type { FindingRow, FindingStatus, ImageInput, PaletteColor, Role } from "@/lib/types";
+import type { FindingRow, FindingStatus, ImageInput, PaletteColor, Role, ReasonCode } from "@/lib/types";
 import { applyAccepted, DraftView } from "./DraftView";
 import { FindingCard } from "./FindingCard";
 import { AiActivity, aiSummary } from "./review/AiActivity";
@@ -39,7 +41,6 @@ export function ReviewWorkspace({ detail, palette, role }: { detail: SubmissionD
   }
 
   const inFlight = useRef(0);
-  const replaceRef = useRef<HTMLInputElement>(null);
   const [active, setActive] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -64,7 +65,7 @@ export function ReviewWorkspace({ detail, palette, role }: { detail: SubmissionD
   const tone = scoreTone(score);
   const listed = tab === "todo" ? open : findings.filter((f) => !isOpen(f));
   // Everything about the picture itself has one fix, so it sits in one group with one button.
-  const inPicture = (f: FindingRow) => f.start < 0 && !f.alt && !f.altFix;
+  const inPicture = (f: FindingRow) => f.start < 0 && !f.alt && !f.altFix && f.pass !== "video";
   const cards = listed.filter((f) => !inPicture(f));
   const pictureCards = listed.filter(inPicture);
   const before = revisions[revisions.length - 2];
@@ -78,13 +79,13 @@ export function ReviewWorkspace({ detail, palette, role }: { detail: SubmissionD
     requestAnimationFrame(() => document.getElementById(`finding-${id}`)?.scrollIntoView({ behavior: "smooth", block: "nearest" }));
   };
 
-  async function decide(f: FindingRow, status: FindingStatus, reason?: string): Promise<boolean> {
+  async function decide(f: FindingRow, status: FindingStatus, reason?: string, reasonCode?: ReasonCode): Promise<boolean> {
     setError(null);
     setSaving((s) => [...s, f.id]);
     inFlight.current += 1;
-    setFindings((xs) => xs.map((x) => (x.id === f.id ? { ...x, status, reason: reason ?? x.reason, decidedBy: role } : x)));
+    setFindings((xs) => xs.map((x) => (x.id === f.id ? { ...x, status, reason: reason ?? x.reason, reasonCode: reasonCode ?? null, decidedBy: role } : x)));
     try {
-      await api(`/api/findings/${f.id}`, { method: "PATCH", body: { status, reason } });
+      await api(`/api/findings/${f.id}`, { method: "PATCH", body: { status, reason, reasonCode } });
       return true;
     } catch (e) {
       setFindings((xs) => xs.map((x) => (x.id === f.id ? f : x)));
@@ -94,6 +95,16 @@ export function ReviewWorkspace({ detail, palette, role }: { detail: SubmissionD
       inFlight.current -= 1;
       setSaving((s) => s.filter((id) => id !== f.id));
       if (inFlight.current === 0) router.refresh();
+    }
+  }
+
+  async function keepRule(f: FindingRow) {
+    setError(null);
+    try {
+      await api(`/api/findings/${f.id}/calibration`, { method: "DELETE" });
+      router.refresh();
+    } catch (e) {
+      setError((e as Error).message);
     }
   }
 
@@ -123,7 +134,7 @@ export function ReviewWorkspace({ detail, palette, role }: { detail: SubmissionD
   async function replaceImage(file: File) {
     setError(null);
     try {
-      await saveVersion(working, await prepareImage(file, file.name, rev.image?.altText ?? ""));
+      await saveVersion(working, await prepareImage(file, file.name));
     } catch (e) {
       setError((e as Error).message);
     }
@@ -215,8 +226,9 @@ export function ReviewWorkspace({ detail, palette, role }: { detail: SubmissionD
 
       <AnimatePresence>{error && <ErrorNote error={error} />}</AnimatePresence>
 
-      <div className="grid min-w-0 items-start gap-5 [&>*]:min-w-0 lg:grid-cols-[minmax(0,1.25fr)_minmax(340px,1fr)]">
-        <div className="grid min-w-0 gap-4 [&>*]:min-w-0">
+      <div className="grid min-w-0 items-start gap-5 [&>*]:min-w-0 lg:grid-cols-[minmax(0,1.25fr)_minmax(340px,1fr)] lg:grid-rows-[auto_1fr]">
+        {/* On a phone the issues follow the draft directly; the log, claims and history come after. */}
+        <div className="grid min-w-0 gap-4 [&>*]:min-w-0 lg:col-start-1 lg:row-start-1">
           {rev.image && <ImagePanel image={rev.image} report={rev.imageReport ?? null} palette={palette} canReplace={canEdit} busy={busy === "recheck"} onReplace={replaceImage} />}
 
           {(rev.text || editing) && (
@@ -256,6 +268,44 @@ export function ReviewWorkspace({ detail, palette, role }: { detail: SubmissionD
             </Button>
           )}
 
+        </div>
+
+        <section className="grid min-w-0 gap-3 [&>*]:min-w-0 lg:col-start-2 lg:row-span-2 lg:row-start-1" aria-label="Issues">
+          <div className="flex gap-1 rounded-lg bg-white p-1 text-[14px] ring-1 ring-line" role="tablist" aria-label="Issues">
+            {(["todo", "done"] as Tab[]).map((k) => (
+              <button
+                key={k}
+                role="tab"
+                aria-selected={tab === k}
+                onClick={() => setTab(k)}
+                className={cx("flex-1 rounded-md px-2 py-1.5 transition-colors", tab === k ? "bg-soot font-medium text-white" : "text-ink hover:bg-ash-50")}
+              >
+                {k === "todo" ? "To do" : "Done"} <span className="num opacity-70">{k === "todo" ? open.length : findings.length - open.length}</span>
+              </button>
+            ))}
+          </div>
+
+          {listed.length === 0 ? (
+            <Card className="grid place-items-center gap-2 px-6 py-12 text-center">
+              <CheckCircle2 className="size-8 text-green" aria-hidden />
+              <p className="text-lg font-semibold text-ink">{tab === "todo" ? "Nothing left to do" : "Nothing decided yet"}</p>
+              <p className="max-w-xs text-sm text-muted">{tab === "todo" ? "Every issue on this version has been decided." : "Accepted fixes and other decisions appear here."}</p>
+            </Card>
+          ) : (
+            <>
+              {rev.video && <VideoSummary video={rev.video} />}
+              {cards.length > 0 && <CardList items={cards} role={role} activeId={active} saving={saving} locked={locked} onSelect={setActive} onDecide={decide} onEdit={startEdit} onSaveAlt={saveAlt} onKeepRule={keepRule} />}
+              {pictureCards.length > 0 && (
+                <div className="grid gap-3">
+                  <p className="pt-1 text-[14px] font-medium text-ink">In the picture ({pictureCards.length})</p>
+                  <CardList items={pictureCards} role={role} activeId={active} saving={saving} locked={locked} onSelect={setActive} onDecide={decide} onEdit={startEdit} onSaveAlt={saveAlt} onKeepRule={keepRule} />
+                </div>
+              )}
+            </>
+          )}
+        </section>
+
+        <div className="grid min-w-0 gap-4 [&>*]:min-w-0 lg:col-start-1 lg:row-start-2">
           <Fold title={aiSummary(rev.ai)} icon={<Bot className="size-4 text-ash-600" aria-hidden />} defaultOpen>
             <AiActivity ai={rev.ai} canRun={canEdit} busy={busy === "recheck"} onRun={() => saveFixes()} />
           </Fold>
@@ -294,7 +344,7 @@ export function ReviewWorkspace({ detail, palette, role }: { detail: SubmissionD
               <ol className="grid gap-2.5">
                 {audit.slice(0, 12).map((a) => (
                   <li key={a.id} className="text-[13px]">
-                    <span className="font-medium capitalize text-ink">{a.role}</span> <span className="text-ink">{a.detail}</span>
+                    <span className="font-medium capitalize text-ink">{a.role}</span> <span className="text-ink">{tidyDetail(a.detail)}</span>
                     <span className="block text-muted" suppressHydrationWarning>{timeAgo(a.at)}</span>
                   </li>
                 ))}
@@ -302,59 +352,6 @@ export function ReviewWorkspace({ detail, palette, role }: { detail: SubmissionD
             </div>
           </Fold>
         </div>
-
-        <section className="grid min-w-0 gap-3 [&>*]:min-w-0" aria-label="Issues">
-          <div className="flex gap-1 rounded-lg bg-white p-1 text-[14px] ring-1 ring-line" role="tablist" aria-label="Issues">
-            {(["todo", "done"] as Tab[]).map((k) => (
-              <button
-                key={k}
-                role="tab"
-                aria-selected={tab === k}
-                onClick={() => setTab(k)}
-                className={cx("flex-1 rounded-md px-2 py-1.5 transition-colors", tab === k ? "bg-soot font-medium text-white" : "text-ink hover:bg-ash-50")}
-              >
-                {k === "todo" ? "To do" : "Done"} <span className="num opacity-70">{k === "todo" ? open.length : findings.length - open.length}</span>
-              </button>
-            ))}
-          </div>
-
-          {listed.length === 0 ? (
-            <Card className="grid place-items-center gap-2 px-6 py-12 text-center">
-              <CheckCircle2 className="size-8 text-green" aria-hidden />
-              <p className="text-lg font-semibold text-ink">{tab === "todo" ? "Nothing left to do" : "Nothing decided yet"}</p>
-              <p className="max-w-xs text-sm text-muted">{tab === "todo" ? "Every issue on this version has been decided." : "Accepted fixes and other decisions appear here."}</p>
-            </Card>
-          ) : (
-            <>
-              {cards.length > 0 && <CardList items={cards} role={role} activeId={active} saving={saving} locked={locked} onSelect={setActive} onDecide={decide} onEdit={startEdit} onSaveAlt={saveAlt} onSwitchToCreator={() => switchRole("creator")} />}
-              {pictureCards.length > 0 && (
-                <div className="grid gap-3">
-                  <div className="flex flex-wrap items-center gap-2 pt-1">
-                    <p className="text-[14px] font-medium text-ink">In the picture ({pictureCards.length})</p>
-                    {canEdit && tab === "todo" && (
-                      <Button className="ml-auto" size="sm" variant="secondary" loading={busy === "recheck"} icon={<ImageUp className="size-3.5" />} onClick={() => replaceRef.current?.click()}>
-                        Replace image
-                      </Button>
-                    )}
-                  </div>
-                  <CardList items={pictureCards} role={role} activeId={active} saving={saving} locked={locked} onSelect={setActive} onDecide={decide} onEdit={startEdit} onSaveAlt={saveAlt} onSwitchToCreator={() => switchRole("creator")} />
-                </div>
-              )}
-            </>
-          )}
-          <input
-            ref={replaceRef}
-            type="file"
-            accept="image/png,image/jpeg,image/webp"
-            hidden
-            aria-label="Replace image"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) replaceImage(file);
-              e.target.value = "";
-            }}
-          />
-        </section>
       </div>
 
       <AnimatePresence>
@@ -381,13 +378,51 @@ interface CardListProps {
   saving: string[];
   locked: boolean;
   onSelect: (id: string) => void;
-  onDecide: (f: FindingRow, status: FindingStatus, reason?: string) => Promise<boolean>;
+  onDecide: (f: FindingRow, status: FindingStatus, reason?: string, reasonCode?: ReasonCode) => Promise<boolean>;
   onEdit: () => void;
   onSaveAlt: (alt: string) => void;
-  onSwitchToCreator: () => void;
+  onKeepRule: (f: FindingRow) => void;
 }
 
-function CardList({ items, role, activeId, saving, locked, onSelect, onDecide, onEdit, onSaveAlt, onSwitchToCreator }: CardListProps) {
+const isQuiet = (f: FindingRow) => f.calibration?.action === "quieten" && (f.status === "open" || f.status === "disputed");
+
+function CardList({ items, ...rest }: CardListProps) {
+  const [showOptional, setShowOptional] = useState(false);
+  const quiet = items.filter(isQuiet);
+  const loud = items.filter((f) => !isQuiet(f));
+  // Blockers and warnings come first. Suggestions never block, so they wait behind one button
+  // when there is something more important to do, and open by themselves when picked in the draft.
+  const mustSee = loud.filter((f) => f.severity !== "suggestion");
+  const optional = loud.filter((f) => f.severity === "suggestion");
+  const fold = mustSee.length > 0 && optional.length > 0;
+  const showingOptional = !fold || showOptional || optional.some((f) => f.id === rest.activeId);
+  return (
+    <div className="grid gap-3">
+      {(fold ? mustSee : loud).length > 0 && <Cards items={fold ? mustSee : loud} {...rest} />}
+      {fold && showingOptional && <Cards items={optional} {...rest} />}
+      {fold && (
+        <button
+          type="button"
+          onClick={() => setShowOptional(!showingOptional)}
+          aria-expanded={showingOptional}
+          className="justify-self-start rounded-lg px-3 py-2 text-sm font-medium text-ink ring-1 ring-inset ring-ash-200 hover:bg-ash-50"
+        >
+          {showingOptional ? "Hide suggestions" : `Show ${optional.length} suggestion${optional.length === 1 ? "" : "s"} · optional, never blocks approval`}
+        </button>
+      )}
+      {quiet.length > 0 && (
+        <details className="rounded-lg border border-line bg-white p-3">
+          <summary className="cursor-pointer text-sm font-medium text-ink">Low priority ({quiet.length}): usually dismissed</summary>
+          <div className="mt-3">
+            <Cards items={quiet} {...rest} />
+          </div>
+        </details>
+      )}
+    </div>
+  );
+}
+
+function Cards({ items, role, activeId, saving, locked, onSelect, onDecide, onEdit, onSaveAlt, onKeepRule }: CardListProps) {
   return (
     <div className="grid gap-3">
       <AnimatePresence initial={false} mode="popLayout">
@@ -400,10 +435,10 @@ function CardList({ items, role, activeId, saving, locked, onSelect, onDecide, o
               busy={saving.includes(f.id)}
               locked={locked}
               onSelect={() => onSelect(f.id)}
-              onDecide={(status, reason) => onDecide(f, status, reason)}
+              onDecide={(status, reason, code) => onDecide(f, status, reason, code)}
               onEdit={onEdit}
               onSaveAlt={onSaveAlt}
-              onSwitchToCreator={onSwitchToCreator}
+              onKeepRule={() => onKeepRule(f)}
             />
           </motion.div>
         ))}

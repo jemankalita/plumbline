@@ -1,15 +1,17 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
-import { Bot, Check, FileUp, ImagePlus, Loader2, Lock, Sparkles, Trash2 } from "lucide-react";
+import { Bot, Check, Clapperboard, FileUp, ImagePlus, Lock, Sparkles, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { DEMO_IMAGES } from "@/lib/demo-images";
 import { prepareDemoImage, prepareImage } from "@/lib/image-prep";
-import type { ImageInput, Role } from "@/lib/types";
+import type { ImageInput, Role, VideoFrame, VideoRead } from "@/lib/types";
+import { prepareVideo, type PreparedVideo } from "@/lib/video-prep";
+import { AiWorking } from "./AiWorking";
 import { api, Button, Card, cx, ErrorNote, Field, inputCls } from "./ui";
 
-const CHANNELS = ["Instagram", "LinkedIn", "X / Twitter", "Email", "Website", "App store", "Press release", "Ad", "SMS", "Other"];
+const CHANNELS = ["Instagram", "Reels", "Shorts", "LinkedIn", "X / Twitter", "Email", "Website", "App store", "Press release", "Ad", "SMS", "Other"];
 
 const SAMPLES = [
   {
@@ -38,7 +40,38 @@ const SAMPLES = [
   },
 ];
 
-const STEPS = ["Rules & terminology", "Claims vs. approved facts", "AI: tone and the image", "Verifier"];
+const CHECK_STAGE = "Checking against your Brand Kit and saving";
+const READ_STAGE = "AI is reading the words on screen";
+
+/** The live panel for the current step: what is being looked at, and what the step covers. */
+function CheckWorking({ stage, image, video, hasText }: { stage: string; image: ImageInput | null; video: PreparedVideo | null; hasText: boolean }) {
+  if (stage === READ_STAGE && video) {
+    return (
+      <AiWorking
+        title={stage}
+        images={video.send.map((f) => f.dataUrl)}
+        imageNote={`${video.send.length} frames sent to AI`}
+        checks={["Reading words on screen in each frame", "Looking for the logo in each frame", "Noting when each caption appears and leaves"]}
+        hint="Usually 15 to 40 seconds for a short Reel. The video itself stays on your device."
+        slowNote="Still reading. AI gets up to two and a half minutes, then the check carries on without the frames it could not read."
+      />
+    );
+  }
+  const checks = [
+    ...(hasText || video ? ["Brand terms and banned phrases", "Claims against approved facts"] : []),
+    ...(hasText ? ["Sentence length, tone and the key message"] : []),
+    ...(image ? ["The image against the kit's image rules, logo and palette"] : []),
+    ...(video ? ["Caption timing, logos, shape and length of the video"] : []),
+  ];
+  return (
+    <AiWorking
+      title={stage}
+      images={image?.thumbnail ? [image.thumbnail] : []}
+      checks={checks}
+      hint={image ? "Usually 5 to 25 seconds with an image." : "Usually a few seconds."}
+    />
+  );
+}
 
 export function NewDraftForm({ canSubmit, role }: { canSubmit: boolean; role: Role }) {
   const router = useRouter();
@@ -52,6 +85,10 @@ export function NewDraftForm({ canSubmit, role }: { canSubmit: boolean; role: Ro
   const [parsing, setParsing] = useState(false);
   const [running, setRunning] = useState(false);
   const [step, setStep] = useState(0);
+  const [stages, setStages] = useState<string[]>([CHECK_STAGE]);
+  const [video, setVideo] = useState<PreparedVideo | null>(null);
+  const [frameProgress, setFrameProgress] = useState<string | null>(null);
+  const videoRef = useRef<HTMLInputElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const imgRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
@@ -82,6 +119,27 @@ export function NewDraftForm({ canSubmit, role }: { canSubmit: boolean; role: Ro
     }
   }
 
+  async function readVideo(file: File) {
+    setError(null);
+    setFrameProgress("Opening the video");
+    try {
+      const prepared = await prepareVideo(file, (done, total) => setFrameProgress(`Taking frames: ${done} of ${total}`));
+      setVideo(prepared);
+      if (!title) setTitle(file.name.replace(/\.[^.]+$/, ""));
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setFrameProgress(null);
+    }
+  }
+
+  /** Sends the frames for reading, then merges what was read back into the video. */
+  async function readFrames(prepared: PreparedVideo) {
+    const res = await api<{ read: VideoRead; frames: Pick<VideoFrame, "ms" | "texts" | "logo">[] }>("/api/video/frames", { body: { frames: prepared.send } });
+    const reads = new Map(res.frames.map((f) => [f.ms, f]));
+    return { ...prepared.video, read: res.read, frames: prepared.video.frames.map((f) => ({ ...f, texts: reads.get(f.ms)?.texts ?? [], logo: reads.get(f.ms)?.logo ?? null })) };
+  }
+
   async function pickDemo(src: string, name: string, alt?: string) {
     setError(null);
     try {
@@ -95,21 +153,22 @@ export function NewDraftForm({ canSubmit, role }: { canSubmit: boolean; role: Ro
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    if (!text.trim() && !image) return setError("Add some text or an image first.");
+    if (!text.trim() && !image && !video) return setError("Add some text, an image or a video first.");
+    const planned = video ? [READ_STAGE, CHECK_STAGE] : [CHECK_STAGE];
+    setStages(planned);
     setRunning(true);
     setStep(0);
-    const timer = setInterval(() => setStep((s) => Math.min(s + 1, STEPS.length - 1)), 700);
     try {
+      const checkedVideo = video ? await readFrames(video) : null;
+      setStep(planned.length - 1);
       const res = await api<{ id: string }>("/api/submissions", {
-        body: { title: title.trim() || image?.name || "Untitled draft", channel, aiAssisted, keyMessage: keyMessage.trim() || null, text, image },
+        body: { title: title.trim() || image?.name || video?.video.name || "Untitled draft", channel, aiAssisted, keyMessage: keyMessage.trim() || null, text, image, video: checkedVideo },
       });
-      setStep(STEPS.length);
+      setStep(planned.length);
       router.push(`/s/${res.id}`);
     } catch (err) {
       setError((err as Error).message);
       setRunning(false);
-    } finally {
-      clearInterval(timer);
     }
   }
 
@@ -132,6 +191,13 @@ export function NewDraftForm({ canSubmit, role }: { canSubmit: boolean; role: Ro
     );
   }
 
+  const missing = parsing
+    ? "Reading the file…"
+    : frameProgress
+      ? "Pulling frames from the video…"
+      : !text.trim() && !image && !video
+        ? "Paste some text, or add an image or a video, to start."
+        : null;
   return (
     <form onSubmit={submit} className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(300px,1fr)]">
       <Card className="overflow-hidden">
@@ -197,7 +263,7 @@ export function NewDraftForm({ canSubmit, role }: { canSubmit: boolean; role: Ro
         </div>
       </Card>
 
-      <div className="grid gap-4 lg:sticky lg:top-20">
+      <div className="flex min-w-0 flex-col gap-4">
         <Card className="grid gap-4 p-5">
           <Field label="Title" htmlFor="title">
             <input id="title" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={140} placeholder="e.g. Diwali offer · Instagram caption" className={inputCls} />
@@ -279,31 +345,65 @@ export function NewDraftForm({ canSubmit, role }: { canSubmit: boolean; role: Ro
           <input ref={imgRef} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={(e) => e.target.files?.[0] && readImage(e.target.files[0])} />
         </Card>
 
+        <Card className="p-5">
+          <p className="text-[14px] font-medium text-ink">Video</p>
+          <p className="text-[13px] text-muted">Plumbline reads words on screen from sampled frames. It does not hear speech. The video stays on your device.</p>
+          {video ? (
+            <div className="mt-3 flex items-center gap-3 text-sm text-ink">
+              <Clapperboard className="size-5 text-ash-600" aria-hidden />
+              <span className="min-w-0 flex-1 truncate">
+                {video.video.name} · {video.send.length} frames
+              </span>
+              <button type="button" onClick={() => setVideo(null)} className="inline-flex items-center gap-1 text-[13px] text-red-700 hover:underline">
+                <Trash2 className="size-3" /> Remove
+              </button>
+            </div>
+          ) : (
+            <Button type="button" className="mt-3 w-full" variant="secondary" loading={!!frameProgress} icon={<Clapperboard className="size-4" />} onClick={() => videoRef.current?.click()}>
+              {frameProgress ?? "Add a video"}
+            </Button>
+          )}
+          <input ref={videoRef} type="file" accept="video/mp4,video/quicktime,video/webm" hidden onChange={(e) => e.target.files?.[0] && readVideo(e.target.files[0])} />
+        </Card>
+
         <AnimatePresence>{error && <ErrorNote error={error} />}</AnimatePresence>
 
-        <Button type="submit" variant="primary" className="h-12 text-[15px]" loading={running} disabled={(!text.trim() && !image) || parsing}>
-          {running ? "Checking…" : "Run the brand check"}
-        </Button>
+        {/* On a laptop the button leads the column so it is above the fold; on a phone it follows the fields. */}
+        <div className="order-last grid gap-2 lg:order-first">
+          <Button type="submit" variant="primary" className="h-12 w-full text-[15px]" loading={running} disabled={!!missing} aria-describedby={missing ? "run-hint" : undefined}>
+            {running ? "Checking…" : "Run the brand check"}
+          </Button>
 
-        <AnimatePresence>
-          {running && (
-            <motion.ol initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="grid gap-1.5 rounded-2xl border border-line bg-white p-4">
-              {STEPS.map((s, i) => (
-                <li key={s} className="flex items-center gap-2.5 text-sm">
-                  <span
-                    className={cx(
-                      "grid size-5 place-items-center rounded-full text-[13px] transition-colors",
-                      i < step ? "bg-green text-white" : i === step ? "bg-ash-100 text-ash-700" : "bg-ash-50 text-muted"
-                    )}
-                  >
-                    {i < step ? <Check className="size-3" /> : i === step ? <Loader2 className="size-3 animate-spin" /> : i + 1}
-                  </span>
-                  <span className={i <= step ? "text-ink" : "text-muted"}>{s}</span>
-                </li>
-              ))}
-            </motion.ol>
+          <AnimatePresence>
+            {running && (
+              <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="grid gap-4 rounded-2xl border border-line bg-white p-4">
+                {stages.length > 1 && (
+                  <ol className="grid gap-1.5" aria-label="Steps">
+                    {stages.map((s, i) => (
+                      <li key={s} className="flex items-center gap-2.5 text-sm">
+                        <span
+                          className={cx(
+                            "grid size-5 place-items-center rounded-full text-[13px] transition-colors",
+                            i < step ? "bg-green text-white" : i === step ? "bg-ash-100 text-ash-700" : "bg-ash-50 text-muted"
+                          )}
+                        >
+                          {i < step ? <Check className="size-3" /> : i + 1}
+                        </span>
+                        <span className={i <= step ? "text-ink" : "text-muted"}>{s}</span>
+                      </li>
+                    ))}
+                  </ol>
+                )}
+                <CheckWorking key={step} stage={stages[Math.min(step, stages.length - 1)]} image={image} video={video} hasText={!!text.trim()} />
+              </motion.div>
+            )}
+          </AnimatePresence>
+          {missing && !running && (
+            <p id="run-hint" className="text-center text-[13px] text-muted">
+              {missing}
+            </p>
           )}
-        </AnimatePresence>
+        </div>
       </div>
     </form>
   );

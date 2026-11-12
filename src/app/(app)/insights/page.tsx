@@ -1,6 +1,8 @@
+import { currentSession } from "@/lib/auth";
 import { ArrowRight, Lightbulb, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { insights } from "@/lib/db/repo";
+import { NumberTicker } from "@/components/ui";
 
 export const metadata = { title: "Insights" };
 
@@ -15,8 +17,12 @@ const TYPE_LABEL: Record<string, string> = {
   legal: "Legal",
 };
 
+const ACTION_LABEL: Record<string, string> = { observe: "Noted, nothing changed.", quieten: "Moved to low priority.", demote: "Lowered one level." };
+const MIN_REPLAY = 20;
+
 export default async function InsightsPage() {
-  const d = await insights();
+  const { kitId } = await currentSession();
+  const d = await insights(kitId);
   const maxType = Math.max(1, ...d.byType.map((t) => t.count));
 
   return (
@@ -40,10 +46,49 @@ export default async function InsightsPage() {
         ].map(([l, v]) => (
           <div key={l} className="rounded-2xl border border-line bg-white px-4 py-3.5">
             <dt className="text-[13px] text-muted">{l}</dt>
-            <dd className="num mt-1 text-[30px] font-semibold leading-none tracking-[-0.02em] text-ink">{v}</dd>
+            <dd className="mt-1 text-[30px] font-semibold leading-none tracking-[-0.02em] text-ink"><NumberTicker value={Number(v)} /></dd>
           </div>
         ))}
       </dl>
+
+      <section className="rounded-2xl border border-line bg-white p-5">
+        <p className="kicker">What it has learned from this team</p>
+        {d.learning.rules.length === 0 ? (
+          <p className="mt-3 text-sm text-muted">Nothing yet. A check goes quiet only after several drafts and at least 2 people say it was wrong. Blockers and legal, claim and accessibility checks never change.</p>
+        ) : (
+          <ul className="mt-3 grid gap-2">
+            {d.learning.rules.map((r) => (
+              <li key={r.ruleKey} className="text-sm text-ink">
+                <span className="num text-[13px] text-ash-600">{r.label}</span> {r.title}: dismissed <b className="num font-medium">{r.dismissed}</b> of <b className="num font-medium">{r.decided}</b> by {r.people} {r.people === 1 ? "person" : "people"}.{" "}
+                <span className="text-muted">{r.pinnedUntil ? "Kept at full strength." : ACTION_LABEL[r.action]}</span>
+                {r.practice > 0 && (
+                  <span className="mt-1 block w-fit rounded-md bg-amber-50 px-2 py-1 text-[12px] text-amber-800 ring-1 ring-inset ring-amber/25">
+                    Practice data: these figures mix in {r.practice} decisions invented to show how learning works. The Gap Finder below counts only real decisions, so its numbers differ.
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
+          <div className="rounded-xl bg-ash-50 p-4">
+            <p className="text-[13px] text-muted">Replay of this team&apos;s real decisions</p>
+            {d.learning.replay.decisions < MIN_REPLAY ? (
+              <p className="mt-1 text-sm text-ink">Not enough real decisions yet ({d.learning.realDecisions} so far).</p>
+            ) : (
+              <p className="mt-1 text-sm text-ink">
+                <b className="num font-medium">{d.learning.replay.realIssuesLost}</b> real issues would have gone quiet. <b className="num font-medium">{d.learning.replay.falseAlarmsQuietened}</b> false alarms would have too, out of {d.learning.replay.decisions} decisions.
+              </p>
+            )}
+          </div>
+          <div className="rounded-xl bg-ash-50 p-4">
+            <p className="text-[13px] text-muted">Simulated replay: invented data, 8 rules</p>
+            <p className="mt-1 text-sm text-ink">
+              <b className="num font-medium">{d.learning.simulatedReplay.realIssuesLost}</b> real issues would have gone quiet. <b className="num font-medium">{d.learning.simulatedReplay.falseAlarmsQuietened}</b> false alarms would have too, out of {d.learning.simulatedReplay.decisions} decisions.
+            </p>
+          </div>
+        </div>
+      </section>
 
       {/* Gap Finder */}
       <section className="overflow-hidden rounded-2xl border border-ash-300 bg-gradient-to-br from-white to-ash-50">
@@ -81,8 +126,14 @@ export default async function InsightsPage() {
                       <circle cx="18" cy="18" r="15.5" fill="none" stroke="var(--color-ash-100)" strokeWidth="3" />
                       <circle cx="18" cy="18" r="15.5" fill="none" stroke="var(--color-red)" strokeWidth="3" strokeLinecap="round" strokeDasharray={`${g.rate * 97.4} 97.4`} />
                     </svg>
-                    <span className="num text-xl font-semibold text-red">{Math.round(g.rate * 100)}%</span>
+                    <span className="grid justify-items-center leading-none">
+                      <span className="num text-xl font-semibold text-red">{Math.round(g.rate * 100)}%</span>
+                      <span className="mt-1 text-[11px] text-muted">overridden</span>
+                    </span>
                   </div>
+                  <p className="max-w-[12rem] text-[12px] text-muted md:text-right">
+                    Share of the {g.decided} real decisions on this rule that went against it
+                  </p>
                   <Link href="/kit" className="inline-flex items-center gap-1 text-sm font-medium text-ash-700 hover:underline">
                     Rewrite in Brand Kit <ArrowRight className="size-4" />
                   </Link>

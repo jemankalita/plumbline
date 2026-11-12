@@ -18,7 +18,14 @@ const CHECK_LABEL: Record<RuleCheck["kind"], string> = {
   contrast: "WCAG contrast",
   palette: "Palette match",
   vision: "AI looks at the image",
+  videoFormat: "Video shape and length",
+  minOnScreen: "Time on screen",
+  logoDistortion: "Logo proportions",
+  logoColour: "Logo colour",
+  logoClearSpace: "Logo clear space",
 };
+
+const isAiCheck = (c: RuleCheck) => c.kind === "vision";
 
 function daysUntil(date: string, today: string) {
   return Math.round((new Date(date).getTime() - new Date(today).getTime()) / 86400000);
@@ -32,7 +39,8 @@ export function BrandKitEditor({ kit, canEdit, aiOn, today }: { kit: BrandKit; c
   const [busy, setBusy] = useState<string | null>(null);
 
   const expired = kit.facts.filter((f) => f.expiresOn && daysUntil(f.expiresOn, today) < 0).length;
-  const judgement = kit.rules.filter((r) => !r.check).length;
+  // "vision" rules are stored with a check, but AI judges them, so they count as AI-judged.
+  const judgement = kit.rules.filter((r) => !r.check || isAiCheck(r.check)).length;
 
   async function save(kind: "rules" | "terms" | "facts", item: object) {
     setBusy("save");
@@ -80,7 +88,7 @@ export function BrandKitEditor({ kit, canEdit, aiOn, today }: { kit: BrandKit; c
           </p>
         </div>
         <dl className="flex gap-6 text-sm">
-          <Stat n={kit.rules.length - judgement} label="deterministic rules" />
+          <Stat n={kit.rules.length - judgement} label="rules checked by code" />
           <Stat n={judgement} label="AI-judged rules" />
           <Stat n={expired} label="expired facts" hot={expired > 0} />
         </dl>
@@ -128,9 +136,13 @@ export function BrandKitEditor({ kit, canEdit, aiOn, today }: { kit: BrandKit; c
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       <SeverityBadge s={r.severity} />
                       <Pill className="bg-white text-muted ring-line">{ISSUE[r.category]}</Pill>
-                      {r.check ? (
+                      {r.check && !isAiCheck(r.check) ? (
                         <Pill className="bg-ash-50 text-ash-700 ring-ash-200">
                           <Cpu className="size-3" /> {CHECK_LABEL[r.check.kind]}
+                        </Pill>
+                      ) : r.check ? (
+                        <Pill className="bg-white text-ash-700 ring-ash-200">
+                          <Sparkles className="size-3" /> {CHECK_LABEL[r.check.kind]}
                         </Pill>
                       ) : (
                         <Pill className="bg-white text-ash-700 ring-ash-200">
@@ -391,7 +403,7 @@ function EditorModal({
                 </select>
               </Field>
             </div>
-            <Field label="How it's checked" hint="Deterministic checks are exact. AI judgement is verified before anyone sees it.">
+            <Field label="How it's checked" hint="Code checks are exact. AI judgement is verified before anyone sees it.">
               <select value={s("checkKind")} onChange={set("checkKind")} className={inputCls}>
                 <option value="">AI judgement (tone, messaging…)</option>
                 <option value="pattern">Pattern (banned words or phrases)</option>
@@ -686,7 +698,7 @@ function Importer({ canEdit, aiOn, onDone }: { canEdit: boolean; aiOn: boolean; 
           </div>
           {proposal.voice && <Proposed id="voice" skip={skip} toggle={toggle} title="Voice" body={proposal.voice} />}
           {proposal.rules.map((r) => (
-            <Proposed key={r.id} id={r.id} skip={skip} toggle={toggle} title={`§${r.section} ${r.title}`} body={r.text} tag={`${r.severity} · ${r.check ? "pattern" : "AI judgement"}`} />
+            <Proposed key={r.id} id={r.id} skip={skip} toggle={toggle} title={`§${r.section} ${r.title}`} body={r.text} tag={`${r.severity} · ${r.check && !isAiCheck(r.check) ? "pattern" : "AI judgement"}`} />
           ))}
           {proposal.terms.map((t) => (
             <Proposed key={t.id} id={t.id} skip={skip} toggle={toggle} title={t.preferred} body={`Not: ${t.banned.join(", ")}`} tag="term" />

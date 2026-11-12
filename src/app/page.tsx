@@ -1,13 +1,12 @@
 import { Landing } from "@/components/landing/Landing";
-import type { BoardRow, KitColumn, ReplayRun } from "@/components/landing/data";
-import { ROLES } from "@/lib/auth-shared";
+import type { BoardRow, ReplayRun } from "@/components/landing/data";
 import { DEMO_KIT, DEMO_SUBMISSIONS } from "@/lib/db/seed";
 import { runReview } from "@/lib/engine";
 import type { Citation, Finding } from "@/lib/types";
 
 export const dynamic = "force-dynamic"; // reads the AI setting and runs a fresh check at request time
 
-const PASS_LABEL = { rules: "Rules pass", claims: "Claims pass", judgement: "AI judgement", image: "Image pass" } as const;
+const PASS_LABEL = { rules: "Rules pass", claims: "Claims pass", judgement: "AI judgement", image: "Image pass", video: "Video pass" } as const;
 const BOARD_ROWS = 9;
 
 function citedTitle(c: Citation): string {
@@ -54,17 +53,7 @@ async function liveRun(): Promise<{ replay: ReplayRun; rows: BoardRow[]; checked
   return { replay, rows: rows.slice(0, BOARD_ROWS), checked: { drafts: drafts.length, findings: rows.length }, ms };
 }
 
-function kitColumns(): KitColumn[] {
-  const visual = new Set(["accessibility", "visual"]);
-  return [
-    { kind: "Voice and claims", names: DEMO_KIT.rules.filter((r) => !visual.has(r.category)).slice(0, 8).map((r) => r.title) },
-    { kind: "Approved facts", names: DEMO_KIT.facts.map((f) => f.statement) },
-    { kind: "Images", names: [...DEMO_KIT.rules.filter((r) => visual.has(r.category)).map((r) => r.title), ...DEMO_KIT.palette.map((p) => `${p.name} ${p.hex}`)] },
-    { kind: "People who decide", names: ROLES.map((r) => `${r.person.split(" · ")[0]}, ${r.name.toLowerCase()}`) },
-  ];
-}
-
 export default async function Home() {
   const run = await liveRun();
-  return <Landing aiOn={!!process.env.GEMINI_API_KEY?.trim()} replay={run.replay} board={run.rows} checked={run.checked} boardMs={run.ms} columns={kitColumns()} />;
+  return <Landing aiOn={!!process.env.GEMINI_API_KEY?.trim()} replay={run.replay} board={run.rows} checked={run.checked} boardMs={run.ms} />;
 }

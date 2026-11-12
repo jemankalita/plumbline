@@ -27,19 +27,12 @@ export interface ReplayRun {
   findings: ReplayFinding[];
 }
 
-/** A kind of Brand Kit record and the names in it, for the typographic list. */
-export interface KitColumn {
-  kind: string;
-  names: string[];
-}
-
 export interface LandingData {
   aiOn: boolean;
   replay: ReplayRun;
   board: BoardRow[];
   /** True totals for the run; the board may show only the first rows. */
   checked: { drafts: number; findings: number };
-  columns: KitColumn[];
   boardMs: number;
 }
 

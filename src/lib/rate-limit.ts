@@ -1,5 +1,5 @@
-// Small in-memory limiter. It protects the Gemini quota from a single busy client.
-// Counts live per server process, so on a multi-instance host treat the limits as approximate.
+// Protects the Gemini quota from a single busy client. With Supabase, counts are shared by every
+// server instance (see enforceLimits). Without it, or if the database call fails, each process counts here.
 
 export interface LimitRule {
   limit: number;
@@ -11,6 +11,9 @@ export const LIMITS = {
   publicCheck: { limit: 12, windowMs: 10 * MINUTE },
   publicCheckAll: { limit: 300, windowMs: 24 * 60 * MINUTE },
   saveVersion: { limit: 30, windowMs: 10 * MINUTE },
+  videoRead: { limit: 8, windowMs: 10 * MINUTE },
+  parseFile: { limit: 20, windowMs: 10 * MINUTE },
+  kitImport: { limit: 5, windowMs: 10 * MINUTE },
 } satisfies Record<string, LimitRule>;
 
 const MAX_KEYS = 5000;

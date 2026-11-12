@@ -3,10 +3,13 @@
 import Link from "next/link";
 import { useState } from "react";
 import type { FindingRow, ReviewResult } from "@/lib/types";
+import { AiWorking } from "../AiWorking";
 import { DraftView } from "../DraftView";
 import { api, Button, cx, ErrorNote, Logo, ScoreRing, SeverityBadge } from "../ui";
-import type { KitColumn } from "./data";
+import { EmptyResult } from "./EmptyResult";
 import { Reveal } from "./Landing";
+import { Skyline } from "./Skyline";
+import { WordsReveal } from "./Motion";
 
 // ---------- one finding, shown whole like a plate in a manual ----------
 
@@ -158,7 +161,7 @@ export function Playground({ aiOn }: { aiOn: boolean }) {
     <section id="try" className="scroll-mt-4 bg-lime px-[var(--margin)] py-[clamp(72px,8vw,128px)] text-soot">
       <div>
         <Reveal>
-          <h2 className="display text-[36px] lg:text-[clamp(40px,4.4vw,64px)]">Paste a caption</h2>
+          <WordsReveal className="display text-[36px] lg:text-[clamp(40px,4.4vw,64px)]" text="Paste a caption" />
           <p className="mt-4 max-w-[56ch] text-[17px] leading-[1.55] lg:text-[18px]">
             It is checked against the demo QuickKart Brand Kit by the same engine the workspace uses. Nothing is saved.{" "}
             {aiOn ? "AI judgement is on for tone and messaging." : "AI judgement is off on this server, so only the rule and claim passes run."}
@@ -198,20 +201,26 @@ export function Playground({ aiOn }: { aiOn: boolean }) {
         </Reveal>
 
         <Reveal i={2}>
-          <div data-ui className="min-h-[320px] bg-white p-5" aria-live="polite">
+          <div data-ui className={cx("bg-white p-5", (busy || res) && "min-h-[320px]")} aria-live="polite">
             <ErrorNote error={error} />
             {!res && !busy && !error && (
-              <div className="grid min-h-[280px] content-center">
-                <p className="text-[20px] font-semibold leading-tight tracking-[-0.02em]">The marks appear here.</p>
-                <p className="mt-2 max-w-[36ch] text-[16px] text-muted">Each one with the rule it cites and a fix. Example 1 breaks several rules in one line.</p>
-              </div>
+              <EmptyResult
+                title="The marks appear here."
+                body="Each one with the rule it cites and a fix. Example 1 breaks several rules in one line."
+                rows={["Brand terms and banned phrases", "Claims against approved facts", "Tone and readability"]}
+              />
             )}
             {busy && !res && (
-              <div className="grid gap-1.5">
-                {[0, 1, 2].map((i) => (
-                  <div key={i} className="skeleton h-16" />
-                ))}
-              </div>
+              <AiWorking
+                title="Checking against the QuickKart Brand Kit"
+                checks={[
+                  "Brand terms and banned phrases",
+                  "Claims against approved facts",
+                  "Sentence length and readability",
+                  ...(aiOn ? ["Tone against the brand's voice, by AI"] : []),
+                ]}
+                hint={aiOn ? "Usually a few seconds. Nothing is saved." : "Takes about a second. Nothing is saved."}
+              />
             )}
             {res && (
               <div className={cx("grid gap-4 transition-opacity", busy && "opacity-50")}>
@@ -219,7 +228,7 @@ export function Playground({ aiOn }: { aiOn: boolean }) {
                   <ScoreRing score={res.score} size={56} stroke={5} />
                   <p className="text-[15px]">
                     <b className="num font-semibold">{res.findings.length}</b> finding{res.findings.length === 1 ? "" : "s"} in <span className="num">{res.durationMs} ms</span>
-                    {res.dropped > 0 && <span className="text-muted"> · {res.dropped} unverifiable AI finding(s) dropped</span>}
+                    {res.dropped > 0 && <span className="text-muted"> · {res.dropped} unverifiable AI finding{res.dropped === 1 ? "" : "s"} dropped</span>}
                   </p>
                 </div>
                 <div className="bg-ash-50 p-4 text-[18px] leading-[1.6]">
@@ -258,40 +267,15 @@ export function Playground({ aiOn }: { aiOn: boolean }) {
   );
 }
 
-// ---------- what it checks: plain names in columns ----------
-
-export function Names({ columns }: { columns: KitColumn[] }) {
-  return (
-    <section className="bg-white px-[var(--margin)] py-[clamp(72px,8vw,128px)] text-soot">
-      <div className="grid gap-10 lg:grid-cols-12 lg:gap-8">
-        <Reveal className="lg:col-span-3">
-          <h2 className="text-[26px] font-semibold leading-[1.1] tracking-[-0.03em] lg:text-[32px]">What it holds you to</h2>
-          <p className="mt-4 max-w-[30ch] text-[16px] leading-[1.5] text-muted">The demo QuickKart Brand Kit. Yours is imported from your own guideline PDF.</p>
-        </Reveal>
-        <Reveal i={1} className="grid grid-cols-2 gap-x-5 gap-y-8 text-[15px] leading-[1.5] lg:col-span-8 lg:col-start-5 lg:grid-cols-4 lg:gap-x-8 lg:text-[16px]">
-          {columns.map((c) => (
-            <div key={c.kind}>
-              <p className="text-muted">{c.kind}</p>
-              {c.names.map((n) => (
-                <p key={n}>{n}</p>
-              ))}
-            </div>
-          ))}
-        </Reveal>
-      </div>
-    </section>
-  );
-}
-
 // ---------- close ----------
 
 export function Closing() {
   return (
     <>
-      <section className="bg-ash-50 px-[var(--margin)] py-[clamp(72px,8vw,128px)] text-soot">
+      <section className="bg-white px-[var(--margin)] pt-[clamp(72px,8vw,128px)] text-soot">
         <Reveal className="flex flex-col items-start justify-between gap-8 lg:flex-row lg:items-end">
           <div>
-            <h2 className="display text-[36px] lg:text-[clamp(40px,4.4vw,64px)]">See the whole review flow</h2>
+            <WordsReveal className="display text-[36px] lg:text-[clamp(40px,4.4vw,64px)]" text="See the whole review flow" />
             <p className="mt-4 max-w-[56ch] text-[17px] leading-[1.55] text-muted lg:text-[18px]">
               The workspace is a working demo. Switch between Creator, Reviewer, Approver and Admin from the top bar; each role can do only what the role matrix allows.
             </p>
@@ -300,6 +284,9 @@ export function Closing() {
             Open the workspace
           </Link>
         </Reveal>
+        <div className="mt-16 lg:mt-20">
+          <Skyline />
+        </div>
       </section>
       <Footer />
     </>

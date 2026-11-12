@@ -1,5 +1,7 @@
+import { DEFAULT_KIT_ID } from "@/lib/auth-shared";
 import { z } from "zod";
 import { geminiProvider } from "@/lib/ai/gemini";
+import { storedProvider } from "@/lib/db/stored-ai";
 import { enforceLimits, handle, imageSchema, ok, parseBody, requireContent } from "@/lib/api";
 import { getKit } from "@/lib/db/repo";
 import { runReview } from "@/lib/engine";
@@ -17,8 +19,8 @@ const body = z.object({
 export const POST = handle(async (req: Request) => {
   const input = await parseBody(req, body);
   requireContent(input);
-  enforceLimits([`review:${clientKey(req)}`, LIMITS.publicCheck], ["review:all", LIMITS.publicCheckAll]);
-  const kit = await getKit();
-  const result = await runReview({ text: input.text, kit, image: input.image, keyMessage: input.keyMessage, provider: geminiProvider() });
+  await enforceLimits([`review:${clientKey(req)}`, LIMITS.publicCheck], ["review:all", LIMITS.publicCheckAll]);
+  const kit = await getKit(DEFAULT_KIT_ID);
+  const result = await runReview({ text: input.text, kit, image: input.image, keyMessage: input.keyMessage, provider: storedProvider(geminiProvider()) });
   return ok(result);
 });

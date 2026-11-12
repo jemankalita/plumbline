@@ -1,7 +1,8 @@
 import { z } from "zod";
-import { geminiProvider } from "@/lib/ai/gemini";
-import { BadRequest, category, handle, ok, parseBody, severity } from "@/lib/api";
-import { requireRole } from "@/lib/auth";
+import { geminiProvider, ROUTE_AI_DEADLINE_MS } from "@/lib/ai/gemini";
+import { BadRequest, category, handle, ok, parseBody, severity, enforceLimits } from "@/lib/api";
+import { clientKey, LIMITS } from "@/lib/rate-limit";
+import { requireSession } from "@/lib/auth";
 import { escapeRegex } from "@/lib/engine/text";
 import type { Fact, Rule, Term } from "@/lib/types";
 
@@ -48,12 +49,13 @@ function pick<T>(schema: z.ZodType<T>, list: unknown): T[] {
 
 /** Read a guideline document and propose rules, terms and facts. The admin picks what to keep. */
 export const POST = handle(async (req: Request) => {
-  await requireRole("editKit");
+  await requireSession("editKit");
+  await enforceLimits([`import:${clientKey(req)}`, LIMITS.kitImport]);
   const { text } = await parseBody(req, body);
   const provider = geminiProvider();
   if (!provider) throw new BadRequest("Guideline import needs an AI key (GEMINI_API_KEY). You can still add rules by hand.");
 
-  const res = await provider.json<Record<string, unknown>>(SYSTEM, [{ text: `<guidelines>\n${text}\n</guidelines>` }], { timeoutMs: 55000 });
+  const res = await provider.json<Record<string, unknown>>(SYSTEM, [{ text: `<guidelines>\n${text}\n</guidelines>` }], { timeoutMs: ROUTE_AI_DEADLINE_MS, deadlineMs: ROUTE_AI_DEADLINE_MS });
   const stamp = Date.now().toString(36).slice(-4);
 
   const rules: Rule[] = pick(rawRule, res.rules)

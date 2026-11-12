@@ -1,7 +1,8 @@
 import { clientKey, LIMITS } from "@/lib/rate-limit";
 import { geminiProvider } from "@/lib/ai/gemini";
+import { storedProvider } from "@/lib/db/stored-ai";
 import { draftSchema, handle, ok, parseBody, enforceLimits, requireContent } from "@/lib/api";
-import { requireRole } from "@/lib/auth";
+import { requireSession } from "@/lib/auth";
 import { createSubmission, getKit } from "@/lib/db/repo";
 import { runReview } from "@/lib/engine";
 
@@ -9,20 +10,22 @@ export const maxDuration = 60;
 
 /** Create a submission: run the full review on v1 and save it with its findings. */
 export const POST = handle(async (req: Request) => {
-  const role = await requireRole("submit");
+  const { kitId, role } = await requireSession("submit");
   const body = await parseBody(req, draftSchema);
-  enforceLimits([`save:${clientKey(req)}`, LIMITS.saveVersion]);
+  await enforceLimits([`save:${clientKey(req)}`, LIMITS.saveVersion]);
   requireContent(body);
-  const kit = await getKit();
+  const kit = await getKit(kitId);
   const result = await runReview({
     text: body.text,
     kit,
     image: body.image ?? null,
+    video: body.video ?? null,
     keyMessage: body.keyMessage ?? null,
     channel: body.channel,
-    provider: geminiProvider(),
+    provider: storedProvider(geminiProvider()),
   });
   const sub = await createSubmission(
+    kit,
     {
       title: body.title,
       channel: body.channel,

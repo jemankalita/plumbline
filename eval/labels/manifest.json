@@ -1,0 +1,171 @@
+{
+  "method": "Two independent Claude labellers with different prompts, then a third Claude adjudicator. Not human annotators.",
+  "model": "claude-sonnet-5-5 (Agent tool alias: sonnet)",
+  "goldSha256": "2e271eaa08ba13f35dbda3a08210c46e4cf1016c7cc947199795b243c9808a18",
+  "kitSha256": "bce5dd5452b63877e922ee6d9e9b319fdc95451846de9d70a18ae08bde8886e1",
+  "corpusSha256": "2112398612ef48e766bd7ee3fe8597c2eea38195f13abd5e9c891aaf60b0fd03",
+  "promptSha256": {
+    "labellerA": "ef263a32b23cab0f7ea605815df6336b7f2bdc33786932610d98aecf942a0abd",
+    "labellerB": "1210ed34867a2b99552372b3e56daa55a9c8c6bed794e3787b740605dcf0c8d1",
+    "adjudicator": "e3dcbb5d964375ad44ad66df05d37d503f044424d381752177d4376f68c06174"
+  },
+  "counts": {
+    "posts": 80,
+    "goldLabels": 256,
+    "ambiguous": 5,
+    "adjudicated": {
+      "confirm": 50,
+      "reject": 0,
+      "ambiguous": 5
+    }
+  },
+  "agreement": {
+    "gv-ampersand": {
+      "sentences": 255,
+      "positivesA": 0,
+      "positivesB": 0,
+      "alpha": null,
+      "usable": false
+    },
+    "gv-in-order-to": {
+      "sentences": 255,
+      "positivesA": 0,
+      "positivesB": 0,
+      "alpha": null,
+      "usable": false
+    },
+    "gv-please": {
+      "sentences": 255,
+      "positivesA": 0,
+      "positivesB": 0,
+      "alpha": null,
+      "usable": false
+    },
+    "gv-ordinal-date": {
+      "sentences": 255,
+      "positivesA": 0,
+      "positivesB": 0,
+      "alpha": null,
+      "usable": false
+    },
+    "gv-range-hyphen": {
+      "sentences": 255,
+      "positivesA": 1,
+      "positivesB": 1,
+      "alpha": 1,
+      "usable": true
+    },
+    "gv-eg-etc-ie": {
+      "sentences": 255,
+      "positivesA": 0,
+      "positivesB": 0,
+      "alpha": null,
+      "usable": false
+    },
+    "gv-contraction": {
+      "sentences": 255,
+      "positivesA": 1,
+      "positivesB": 1,
+      "alpha": 1,
+      "usable": true
+    },
+    "gv-click": {
+      "sentences": 255,
+      "positivesA": 0,
+      "positivesB": 0,
+      "alpha": null,
+      "usable": false
+    },
+    "gv-money-decimals": {
+      "sentences": 255,
+      "positivesA": 0,
+      "positivesB": 0,
+      "alpha": null,
+      "usable": false
+    },
+    "gv-thousands-comma": {
+      "sentences": 255,
+      "positivesA": 0,
+      "positivesB": 0,
+      "alpha": null,
+      "usable": false
+    },
+    "gv-per-cent": {
+      "sentences": 255,
+      "positivesA": 0,
+      "positivesB": 0,
+      "alpha": null,
+      "usable": false
+    },
+    "gv-small-numbers": {
+      "sentences": 255,
+      "positivesA": 17,
+      "positivesB": 15,
+      "alpha": 0.933,
+      "usable": true
+    },
+    "gv-age-groups": {
+      "sentences": 255,
+      "positivesA": 0,
+      "positivesB": 0,
+      "alpha": null,
+      "usable": false
+    },
+    "gv-today-date": {
+      "sentences": 255,
+      "positivesA": 6,
+      "positivesB": 5,
+      "alpha": 0.907,
+      "usable": true
+    },
+    "gv-sentence-length": {
+      "sentences": 255,
+      "positivesA": 101,
+      "positivesB": 102,
+      "alpha": 0.959,
+      "usable": true
+    },
+    "gv-active-voice": {
+      "sentences": 255,
+      "positivesA": 42,
+      "positivesB": 28,
+      "alpha": 0.703,
+      "usable": true
+    },
+    "gv-abbreviations": {
+      "sentences": 255,
+      "positivesA": 25,
+      "positivesB": 17,
+      "alpha": 0.741,
+      "usable": true
+    },
+    "gv-metaphor": {
+      "sentences": 255,
+      "positivesA": 9,
+      "positivesB": 21,
+      "alpha": 0.576,
+      "usable": false
+    },
+    "gv-uk-english": {
+      "sentences": 255,
+      "positivesA": 1,
+      "positivesB": 1,
+      "alpha": 1,
+      "usable": true
+    },
+    "gv-plain-english": {
+      "sentences": 255,
+      "positivesA": 1,
+      "positivesB": 3,
+      "alpha": 0.497,
+      "usable": false
+    },
+    "terms": {
+      "sentences": 255,
+      "positivesA": 27,
+      "positivesB": 27,
+      "alpha": 0.959,
+      "usable": true
+    }
+  }
+}

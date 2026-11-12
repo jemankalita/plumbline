@@ -14,7 +14,36 @@ export interface Claim {
   value?: number;
   percent?: boolean;
   phrase?: string;
+  /** The word straight after a number, such as "minutes". */
+  unit?: string;
+  /** The currency written before a number, such as "inr". */
+  currency?: string;
 }
+
+const CURRENCY_NAMES: Record<string, string> = { "₹": "inr", rs: "inr", "rs.": "inr", inr: "inr", $: "usd", usd: "usd", "€": "eur", eur: "eur", "£": "gbp", gbp: "gbp" };
+const CURRENCY = "₹|rs\\.?|inr|\\$|usd|€|eur|£|gbp";
+const CURRENCY_BEFORE = new RegExp(`(?<!\\p{L})(${CURRENCY})\\s*$`, "iu");
+const CURRENCY_ON_NUMBER = new RegExp(`(?<!\\p{L})(${CURRENCY})\\s*\\d`, "iu");
+const UNIT_AFTER = /^[ \t]*(\p{L}+)/u;
+
+/** A fact can only back a number measured in the same thing. These words name what a number measures. */
+const MEASURES = [
+  ["minute", "minutes", "min", "mins"],
+  ["hour", "hours", "hr", "hrs"],
+  ["second", "seconds", "sec", "secs"],
+  ["day", "days"],
+  ["week", "weeks"],
+  ["month", "months"],
+  ["year", "years", "yr", "yrs"],
+  ["km", "kms", "kilometre", "kilometres"],
+  ["kg", "kgs"],
+  ["country", "countries"],
+  ["state", "states"],
+  ["store", "stores"],
+  ["app", "apps"],
+];
+
+const currencyName = (symbol?: string) => (symbol ? CURRENCY_NAMES[symbol.toLowerCase()] : undefined);
 
 const TRAILING = new Set("from in with at by for to of the a an and or on our your".split(" "));
 
@@ -23,7 +52,7 @@ const TRAILING = new Set("from in with at by for to of the a an and or on our yo
  * (so a claim never swallows the brand name), then trim dangling function words.
  */
 function extend(text: string, end: number, n: number, stop: Set<string>): number {
-  const re = /^[ \t]+([\p{L}\p{N}'’-]+)/u;
+  const re = /^[ \t]+([\p{L}\p{M}\p{N}'’-]+)/u;
   let cursor = end;
   const ends: { at: number; word: string }[] = [];
   for (let i = 0; i < n; i++) {
@@ -38,6 +67,15 @@ function extend(text: string, end: number, n: number, stop: Set<string>): number
 
 function isYear(v: number, raw: string): boolean {
   return /^\d{4}$/.test(raw) && v >= 1900 && v <= 2100;
+}
+
+const MONTH = "jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sept?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?";
+const LABEL_BEFORE = new RegExp(`(?:\\b(?:step|version|page|section|chapter|phase|part|no\\.?|v)\\s*|\\b(?:${MONTH})\\s+)$`, "i");
+const DATE_OR_TIME_AFTER = new RegExp(`^(?:\\s*(?:[–-]\\s*\\d{1,2}\\s+)?(?:${MONTH})\\b|\\s*(?:am|pm)\\b|:\\d{2})`, "i");
+
+/** Numbers in dates, times and labels like "step 2" say nothing that needs proving. */
+function isIncidental(sentence: string, start: number, end: number): boolean {
+  return LABEL_BEFORE.test(sentence.slice(0, start)) || DATE_OR_TIME_AFTER.test(sentence.slice(end));
 }
 
 /** First words of capitalised brand names, preferred or banned: "quickkart", "quick", "qk"… */
@@ -58,10 +96,12 @@ export function extractClaims(text: string, kit?: BrandKit): Claim[] {
   for (const s of sentences(text)) {
     const local = text.slice(s.start, s.end);
     for (const n of numbers(local)) {
-      if (isYear(n.value, n.raw)) continue;
+      if (isYear(n.value, n.raw) || isIncidental(local, n.start, n.end)) continue;
       const start = s.start + n.start;
       const end = extend(text, s.start + n.end, n.percent ? 1 : 2, stop);
-      out.push({ start, end, quote: text.slice(start, end), sentence: s.text, kind: "number", value: n.value, percent: n.percent });
+      const unit = UNIT_AFTER.exec(local.slice(n.end))?.[1].toLowerCase();
+      const currency = currencyName(CURRENCY_BEFORE.exec(local.slice(0, n.start))?.[1]);
+      out.push({ start, end, quote: text.slice(start, end), sentence: s.text, kind: "number", value: n.value, percent: n.percent, unit, currency });
     }
     for (const sp of superlativeSpans(local)) {
       const start = s.start + sp.start;
@@ -83,6 +123,16 @@ function factTokens(f: Fact): Set<string> {
  */
 export function matchFact(claim: Claim, facts: Fact[]): { fact: Fact; score: number } | null {
   return matchOn(new Set(tokens(claim.quote)), facts) ?? matchOn(new Set(tokens(claim.sentence)), facts);
+}
+
+/** A topic match is not enough: the claim and the fact must be counting the same kind of thing. */
+function isComparable(claim: Claim, fact: Fact): boolean {
+  if (claim.percent && !fact.statement.includes("%")) return false;
+  if (claim.currency && claim.currency !== currencyName(CURRENCY_ON_NUMBER.exec(fact.statement)?.[1])) return false;
+  const measure = claim.unit ? MEASURES.find((group) => group.includes(claim.unit as string)) : undefined;
+  if (!measure) return true;
+  const words = factTokens(fact);
+  return measure.some((word) => words.has(word));
 }
 
 function matchOn(words: Set<string>, facts: Fact[]): { fact: Fact; score: number } | null {
@@ -129,8 +179,8 @@ export function checkClaims(text: string, kit: BrandKit, today = new Date()): Cl
 
   for (const c of extractClaims(text, kit)) {
     const hit = matchFact(c, kit.facts);
-    // A percentage can only be compared with a fact that is itself a percentage.
-    const fact = c.percent && !hit?.fact.statement.includes("%") ? undefined : hit?.fact;
+    const isMismatch = hit !== null && !isComparable(c, hit.fact);
+    const fact = isMismatch ? undefined : hit?.fact;
     // A superlative is supported only by a fact that names that exact superlative as a keyword.
     const supportsSuperlative =
       c.kind === "superlative" && fact && c.phrase
@@ -171,7 +221,7 @@ export function checkClaims(text: string, kit: BrandKit, today = new Date()): Cl
             : `No approved fact backs “${c.quote}”. Route to a reviewer or add it to the facts register.`,
         cites: { kind: "rule", id: claimRule.id, label: `Rule ${claimRule.section}`, excerpt: claimRule.text },
         // only offer a replacement when the claim itself names the fact's topic
-        fix: matchOn(new Set(tokens(c.quote)), kit.facts)?.fact.statement ?? null,
+        fix: isMismatch ? null : matchOn(new Set(tokens(c.quote)), kit.facts)?.fact.statement ?? null,
         needsReview: true,
       });
     } else if (status === "outdated" && fact) {

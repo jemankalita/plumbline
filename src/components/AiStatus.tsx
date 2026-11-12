@@ -7,6 +7,30 @@ import { api, cx } from "./ui";
 
 const shortModel = (name: string | null) => name?.split("·").pop()?.trim() ?? "";
 
+const CACHE_KEY = "plumbline.aiHealth";
+const CACHE_MS = 10 * 60 * 1000; // each test spends quota, so one browser tests at most this often
+const BUSY_NOTE = "AI checks may be slower or skipped. Plain-code checks still work.";
+
+function readCached(): AiHealth | null {
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(CACHE_KEY) ?? "null") as { at: number; health: AiHealth } | null;
+    return saved && Date.now() - saved.at < CACHE_MS ? saved.health : null;
+  } catch {
+    return null;
+  }
+}
+
+function remember(health: AiHealth): AiHealth {
+  try {
+    if (health.ok) sessionStorage.setItem(CACHE_KEY, JSON.stringify({ at: Date.now(), health }));
+  } catch {
+    // Without browser storage the sidebar simply tests again next time.
+  }
+  return health;
+}
+
+const fetchHealth = () => api<AiHealth>("/api/ai/status").then(remember);
+
 /** Sidebar line that reports a real test call to the model, not just whether a key exists. */
 export function AiStatus({ configured }: { configured: boolean }) {
   const [health, setHealth] = useState<AiHealth | null>(null);
@@ -15,9 +39,9 @@ export function AiStatus({ configured }: { configured: boolean }) {
   const test = useCallback(async () => {
     setTesting(true);
     try {
-      setHealth(await api<AiHealth>("/api/ai/status"));
-    } catch (e) {
-      setHealth({ configured, ok: false, model: null, ms: 0, error: (e as Error).message });
+      setHealth(await fetchHealth());
+    } catch {
+      setHealth({ configured, ok: false, model: null, ms: 0, error: BUSY_NOTE });
     } finally {
       setTesting(false);
     }
@@ -26,9 +50,10 @@ export function AiStatus({ configured }: { configured: boolean }) {
   useEffect(() => {
     if (!configured) return;
     let live = true;
-    api<AiHealth>("/api/ai/status")
+    const cached = readCached();
+    (cached ? Promise.resolve(cached) : fetchHealth())
       .then((h) => live && setHealth(h))
-      .catch((e: Error) => live && setHealth({ configured, ok: false, model: null, ms: 0, error: e.message }))
+      .catch(() => live && setHealth({ configured, ok: false, model: null, ms: 0, error: BUSY_NOTE }))
       .finally(() => live && setTesting(false));
     return () => {
       live = false;
@@ -37,7 +62,7 @@ export function AiStatus({ configured }: { configured: boolean }) {
 
   const on = !!health?.ok;
   const failed = !!health && !health.ok && configured;
-  const label = !configured ? "AI off: no API key" : testing ? "Testing AI…" : on ? "AI working" : "AI not responding";
+  const label = !configured ? "AI off: no API key" : testing ? "Testing AI…" : on ? "AI working" : "AI is busy";
 
   return (
     <div className="grid gap-1" aria-live="polite">
@@ -45,7 +70,7 @@ export function AiStatus({ configured }: { configured: boolean }) {
         {testing ? (
           <Loader2 className="size-3 animate-spin" aria-hidden />
         ) : (
-          <span className={cx("size-1.5 rounded-full", on ? "bg-lime" : failed ? "bg-red" : "bg-ash-600")} aria-hidden />
+          <span className={cx("size-1.5 rounded-full", on ? "bg-lime" : failed ? "bg-amber" : "bg-ash-600")} aria-hidden />
         )}
         <span className="font-medium text-white">{label}</span>
         {configured && !testing && (

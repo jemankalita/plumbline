@@ -1,13 +1,15 @@
 @import "tailwindcss";
 
 /*
-  Plumbline tokens. One family (Bricolage Grotesque), soot and lime.
+  Plumbline tokens. Two families: Bricolage Grotesque speaks (headlines, controls, the product),
+  Newsreader is read (running text on the marketing page). Soot and lime.
   Soot brackets the marketing page; the workspace sits on paper with a soot rail.
   Lime is the only action colour. Severity colours exist only to mark findings.
 */
 @theme {
   --font-sans: var(--font-bricolage), "Segoe UI", system-ui, sans-serif;
   --font-display: var(--font-bricolage), "Segoe UI", system-ui, sans-serif;
+  --font-text: var(--font-newsreader), Georgia, "Times New Roman", serif;
 
   --color-soot: #0f0f0f;
   --color-soot-2: #1a1a1a;
@@ -118,6 +120,25 @@ body {
   animation: var(--animate-shimmer);
 }
 
+/* A lime band sweeping down a picture while AI looks at it, so a long wait never looks frozen. */
+.scan-line {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 28%;
+  pointer-events: none;
+  background: linear-gradient(to bottom, transparent, rgb(218 250 156 / 0.45) 80%, var(--color-lime));
+  box-shadow: 0 2px 0 var(--color-lime);
+  animation: scan 2.2s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+@keyframes scan {
+  from { transform: translateY(-100%); }
+  to { transform: translateY(360%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .scan-line { display: none; }
+}
+
 /* ---------- marketing page ---------- */
 
 .display {
@@ -127,6 +148,23 @@ body {
   line-height: 1;
 }
 
+/*
+  Reading text on the marketing page is set in Newsreader; everything that is a control,
+  a heading or a piece of the product stays in Bricolage so the two voices never mix in one line.
+*/
+.landing { font-family: var(--font-text); font-optical-sizing: auto; }
+.landing :is(p, li, figcaption, blockquote, dd) {
+  font-size-adjust: 0.5;
+  hanging-punctuation: first;
+  text-wrap: pretty;
+}
+.landing :is(h1, h2, h3, h4, button, input, textarea, select, label, nav, header, .lift, [data-ui], [data-ui] *),
+.landing a:not(:is(p, li, blockquote) a) {
+  font-family: var(--font-sans);
+  font-size-adjust: none;
+}
+.landing :is(h1, h2, h3) { text-wrap: balance; }
+
 /* masked line reveal: each headline line rises from behind its own baseline */
 .mask-line { display: block; overflow: hidden; padding-bottom: 0.08em; margin-bottom: -0.08em; }
 .mask-line > span { display: block; }
@@ -134,6 +172,26 @@ body {
 .lift { transition: transform 160ms var(--ease-out), background-color 160ms var(--ease-out), color 160ms var(--ease-out); }
 .lift:hover { transform: translateY(-2px); }
 .lift:active { transform: translateY(0) scale(0.98); }
+
+/* marquee: two identical tracks slide left forever; hover pauses (Magic UI pattern) */
+.marquee-track { animation: marquee 38s linear infinite; }
+.marquee:hover .marquee-track { animation-play-state: paused; }
+@keyframes marquee { to { transform: translateX(-100%); } }
+
+/* shine: a light sweep across a primary button on hover */
+.shine { position: relative; overflow: hidden; isolation: isolate; }
+.shine::after {
+  content: ""; position: absolute; inset: 0; z-index: -1;
+  background: linear-gradient(110deg, transparent 30%, rgb(255 255 255 / 0.55) 50%, transparent 70%);
+  transform: translateX(-120%);
+}
+.shine:hover::after { transform: translateX(120%); transition: transform 700ms var(--ease-out); }
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track { animation: none; }
+  .marquee .marquee-track + .marquee-track { display: none; }
+  .marquee { flex-wrap: wrap; }
+}
 
 .under-link {
   text-decoration-line: underline;
