@@ -7,6 +7,8 @@
 Team **Diet Code** (Jeman Kalita, Krishnesha Sarma). Problem statement by Inkloom AI. Round 3: the finished product.
 
 - **Demo brands:** "QuickKart" (quick-commerce groceries) and "Harbour & Pine" (homewares). Both are fictional.
+- **Live app:** https://plumbline-opal.vercel.app
+- **Demo brand:** "QuickKart", a fictional quick-commerce company. It is not a real business.
 
 ---
 
