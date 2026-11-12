@@ -1,10 +1,11 @@
 import { z } from "zod";
 import { BadRequest, factSchema, handle, ok, parseBody, ruleSchema, termSchema } from "@/lib/api";
-import { requireRole } from "@/lib/auth";
+import { currentSession, requireSession } from "@/lib/auth";
+import { patternProblem } from "@/lib/engine/regex-safety";
 import { deleteKitItem, getKit, nextId, updateKitMeta, upsertKitItem, type KitItemKind } from "@/lib/db/repo";
 import type { Fact, Rule, Term } from "@/lib/types";
 
-export const GET = handle(async () => ok(await getKit()));
+export const GET = handle(async () => ok(await getKit((await currentSession()).kitId)));
 
 const meta = z.object({
   name: z.string().trim().min(1).max(80).optional(),
@@ -16,10 +17,10 @@ const meta = z.object({
 });
 
 export const PATCH = handle(async (req: Request) => {
-  const role = await requireRole("editKit");
+  const { kitId, role } = await requireSession("editKit");
   const patch = await parseBody(req, meta);
-  await updateKitMeta(patch, role);
-  return ok(await getKit());
+  await updateKitMeta(kitId, patch, role);
+  return ok(await getKit(kitId));
 });
 
 const item = z.discriminatedUnion("kind", [
@@ -29,28 +30,25 @@ const item = z.discriminatedUnion("kind", [
 ]);
 
 export const POST = handle(async (req: Request) => {
-  const role = await requireRole("editKit");
+  const { kitId, role } = await requireSession("editKit");
   const { kind, item: raw } = await parseBody(req, item);
   if (kind === "rules" && raw.check && "pattern" in raw.check) {
-    try {
-      new RegExp(raw.check.pattern, raw.check.flags ?? "gi");
-    } catch {
-      throw new BadRequest("That pattern isn't a valid regular expression.");
-    }
+    const problem = patternProblem(raw.check.pattern, raw.check.kind === "pattern" ? (raw.check.flags ?? "gi") : "i");
+    if (problem) throw new BadRequest(problem);
   }
-  const id = raw.id || (await nextId(kind));
-  await upsertKitItem(kind, { ...raw, id } as Rule | Term | Fact, role);
-  return ok(await getKit());
+  const id = raw.id || (await nextId(kitId, kind));
+  await upsertKitItem(kitId, kind, { ...raw, id } as Rule | Term | Fact, role);
+  return ok(await getKit(kitId));
 });
 
 const kinds = z.enum(["rules", "terms", "facts"]);
 
 export const DELETE = handle(async (req: Request) => {
-  const role = await requireRole("editKit");
+  const { kitId, role } = await requireSession("editKit");
   const url = new URL(req.url);
   const kind = kinds.safeParse(url.searchParams.get("kind"));
   const id = url.searchParams.get("id");
   if (!kind.success || !id) throw new BadRequest("kind and id are required.");
-  await deleteKitItem(kind.data as KitItemKind, id, role);
-  return ok(await getKit());
+  await deleteKitItem(kitId, kind.data as KitItemKind, id, role);
+  return ok(await getKit(kitId));
 });

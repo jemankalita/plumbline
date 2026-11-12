@@ -38,10 +38,10 @@ export function QueueList({ items }: { items: SubmissionSummary[] }) {
                 <span>v{s.version}</span>
                 <span aria-hidden>·</span>
                 <span suppressHydrationWarning>{timeAgo(s.updatedAt)}</span>
-                <span className="flex items-center gap-2.5 sm:ml-2">
-                  <Count n={s.blockers} cls="bg-red" label="blockers" />
-                  <Count n={s.warnings} cls="bg-amber" label="warnings" />
-                  <Count n={s.suggestions} cls="bg-ash-400" label="suggestions" />
+                <span className="flex flex-wrap items-center gap-1.5 sm:ml-1">
+                  <Count n={s.blockers} cls="bg-red" label="blocker" />
+                  <Count n={s.warnings} cls="bg-amber" label="warning" />
+                  <Count n={s.suggestions} cls="bg-ash-400" label="suggestion" />
                 </span>
                 {s.routed > 0 && (
                   <span className="flex items-center gap-1 text-ash-700">
@@ -58,12 +58,20 @@ export function QueueList({ items }: { items: SubmissionSummary[] }) {
   );
 }
 
+const TONE: Record<string, string> = {
+  blocker: "bg-red-50 text-red-700 ring-red/20",
+  warning: "bg-amber-50 text-amber-800 ring-amber/25",
+  suggestion: "bg-ash-50 text-ash-700 ring-ash-200",
+};
+
+/** A labelled count, e.g. "2 blockers". Zero counts are left out so the row stays quiet. */
 function Count({ n, cls, label }: { n: number; cls: string; label: string }) {
+  if (!n) return null;
+  const plural = n === 1 ? label : `${label}s`;
   return (
-    <span className="num flex items-center gap-1" title={`${n} open ${label}`}>
-      <span className={`size-1.5 rounded-full ${n ? cls : "bg-line"}`} aria-hidden />
-      <span className={n ? "text-ink" : ""}>{n}</span>
-      <span className="sr-only">{label}</span>
+    <span className={`num inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[12px] font-medium ring-1 ring-inset ${TONE[label]}`} title={`${n} open ${plural}`}>
+      <span className={`size-1.5 rounded-full ${cls}`} aria-hidden />
+      {n} {plural}
     </span>
   );
 }

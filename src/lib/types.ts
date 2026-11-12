@@ -1,5 +1,7 @@
 // Domain types shared by the engine, the data layer and the UI.
 
+import type { LogoReadings } from "./engine/logo";
+
 export type Severity = "blocker" | "warning" | "suggestion";
 
 export type IssueType =
@@ -20,7 +22,12 @@ export type RuleCheck =
   | { kind: "altText" }
   | { kind: "contrast"; min: number }
   | { kind: "palette"; maxDistance: number }
-  | { kind: "vision" }; // judged by the AI image pass, which must look at the picture
+  | { kind: "vision" } // judged by the AI image pass, which must look at the picture
+  | { kind: "videoFormat" }
+  | { kind: "minOnScreen"; pattern: string; seconds: number }
+  | { kind: "logoDistortion" }
+  | { kind: "logoColour" }
+  | { kind: "logoClearSpace" };
 
 export interface Rule {
   id: string;
@@ -56,11 +63,19 @@ export interface PaletteColor {
   hex: string;
 }
 
+export interface BrandLogo {
+  name: string;
+  thumbnail: string; // data URL of the correct logo
+  aspect: number;
+  fgHex: string;
+}
+
 export interface BrandKit {
   id: string;
   name: string;
   voice: string;
   palette: PaletteColor[];
+  logos?: BrandLogo[];
   rules: Rule[];
   terms: Term[];
   facts: Fact[];
@@ -79,7 +94,7 @@ export type ClaimStatus = "supported" | "unsupported" | "outdated" | "contradict
 
 export type FindingStatus = "open" | "accepted" | "dismissed" | "disputed" | "cleared" | "overridden";
 
-export type Pass = "rules" | "claims" | "judgement" | "image";
+export type Pass = "rules" | "claims" | "judgement" | "image" | "video";
 
 export interface Finding {
   id: string;
@@ -103,7 +118,26 @@ export interface Finding {
   status: FindingStatus;
   decidedBy?: Role | null;
   reason?: string | null;
+  reasonCode?: ReasonCode | null;
+  /** Recognises this finding in later versions of the draft. */
+  fingerprint?: string | null;
+  /** The version this decision was first made on, when it was carried forward. */
+  carriedFrom?: number | null;
+  /** Time in the video, for findings read from a frame. */
+  frameMs?: number | null;
+  /** What the team's own decisions changed about this finding, and why. */
+  calibration?: FindingCalibration | null;
 }
+
+export interface FindingCalibration {
+  action: "observe" | "quieten" | "demote";
+  note: string;
+  baseSeverity: Severity;
+  simulated: boolean;
+}
+
+/** Why someone said "not an issue". Only `wrong` and `rule_outdated` count as false alarms. */
+export type ReasonCode = "wrong" | "valid_but_exception" | "rule_outdated" | "not_useful";
 
 export interface ClaimResult {
   quote: string;
@@ -118,13 +152,60 @@ export interface ImageInput {
   altText?: string | null;
   /** Dominant colours (hex) extracted in the browser, most frequent first. */
   colors: string[];
+  /** Flat colour areas and how much of the image each covers. */
+  colorAreas?: { hex: string; share: number }[] | null;
   /** Small JPEG data URL, used only to draft alt text and for preview. */
   thumbnail?: string | null;
 }
 
+export type VideoTextBox = [number, number, number, number]; // ymin, xmin, ymax, xmax, each 0–1000
+
+export interface VideoFrame {
+  ms: number;
+  thumbnail?: string | null;
+  texts: { text: string; box?: VideoTextBox | null }[];
+  /** What code measured on the logo in this frame, when there was one. */
+  logo?: LogoReadings | null;
+}
+
+/** One caption, joined across the frames it appeared in. */
+export interface VideoTrack {
+  text: string;
+  startMs: number;
+  endMs: number;
+  box?: VideoTextBox | null;
+}
+
+export interface VideoRead {
+  status: "ran" | "failed" | "skipped";
+  model: string | null;
+  ms: number;
+  note: string;
+}
+
+export interface VideoInput {
+  name: string;
+  durationMs: number;
+  width: number;
+  height: number;
+  sampledEveryMs: number;
+  /** Every time a frame was taken, because samples aren't evenly spaced. */
+  sampledMs?: number[];
+  frames: VideoFrame[];
+  read: VideoRead;
+  /** Set when re-checking a saved video. */
+  tracks?: VideoTrack[];
+}
+
+/** What is stored: the captions, and only the frames a person needs to see. */
+export interface VideoReport extends Omit<VideoInput, "frames" | "tracks"> {
+  frames: { ms: number; thumbnail?: string | null; logo?: LogoReadings | null }[];
+  tracks: VideoTrack[];
+}
+
 /** One attempted use of AI during a check. Skipped and failed attempts are recorded too. */
 export interface AiCall {
-  pass: "judgement" | "image";
+  pass: "judgement" | "image" | "video";
   status: "ran" | "failed" | "skipped";
   model: string | null;
   ms: number;
@@ -164,6 +245,7 @@ export interface ReviewResult {
   score: number;
   ai: AiDisclosure;
   imageReport: ImageReport | null;
+  video?: VideoReport | null;
   dropped: number; // findings rejected by the verifier
   durationMs: number;
 }
@@ -174,6 +256,8 @@ export type SubmissionStatus = "draft" | "in_review" | "changes_requested" | "ap
 
 export interface Submission {
   id: string;
+  kitId: string;
+  createdBy: Role;
   title: string;
   channel: string;
   aiAssisted: boolean;
@@ -190,6 +274,7 @@ export interface Revision {
   text: string;
   image?: ImageInput | null;
   imageReport?: ImageReport | null;
+  video?: VideoReport | null;
   score: number;
   ai: AiDisclosure;
   claims: ClaimResult[];
@@ -204,6 +289,7 @@ export interface FindingRow extends Finding {
 
 export interface AuditEntry {
   id: string;
+  kitId: string;
   submissionId: string | null;
   role: Role;
   action: string;

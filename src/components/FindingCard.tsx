@@ -4,13 +4,21 @@ import { AnimatePresence, motion } from "motion/react";
 import { AlertTriangle, Bot, Check, ChevronDown, Code2, Gavel, MessageSquareWarning, PencilLine, RotateCcw, ShieldCheck, X } from "lucide-react";
 import { useState } from "react";
 import { can } from "@/lib/auth-shared";
-import type { FindingRow, FindingStatus, Role } from "@/lib/types";
+import type { FindingRow, FindingStatus, ReasonCode, Role } from "@/lib/types";
 import { Button, CLAIM, cx, DECISION, inputCls, Pill, SeverityBadge } from "./ui";
 
-type Mode = null | "dispute" | "override" | "clear" | "alt";
+type Mode = null | "dispute" | "override" | "clear" | "alt" | "dismiss";
+
+const REASONS: { code: ReasonCode; label: string }[] = [
+  { code: "wrong", label: "The check is wrong" },
+  { code: "valid_but_exception", label: "Fair, but an exception here" },
+  { code: "rule_outdated", label: "The rule is out of date" },
+  { code: "not_useful", label: "Not useful" },
+];
 
 /** Who found this: the reader should always know whether a person can trust it as a measurement. */
 function sourceOf(f: FindingRow): { label: string; ai: boolean } {
+  if (f.pass === "video") return { label: f.ai ? "AI read it, code checked it" : "Measured by code", ai: f.ai };
   if (f.altFix) return { label: "Found by code, fix by AI", ai: true };
   if (f.ai && f.pass === "image") return { label: f.quote.startsWith("Text on") ? "AI read it, code checked it" : `AI looked at the image · ${Math.round(f.confidence * 100)}%`, ai: true };
   if (f.ai) return { label: `AI judgement · ${Math.round(f.confidence * 100)}%`, ai: true };
@@ -28,7 +36,7 @@ export function FindingCard({
   onDecide,
   onEdit,
   onSaveAlt,
-  onSwitchToCreator,
+  onKeepRule,
 }: {
   f: FindingRow;
   role: Role;
@@ -36,16 +44,17 @@ export function FindingCard({
   busy: boolean;
   locked: boolean;
   onSelect: () => void;
-  onDecide: (status: FindingStatus, reason?: string) => Promise<boolean>;
+  onDecide: (status: FindingStatus, reason?: string, reasonCode?: ReasonCode) => Promise<boolean>;
   onEdit: () => void;
   onSaveAlt: (alt: string) => void;
-  onSwitchToCreator: () => void;
+  onKeepRule: () => void;
 }) {
   const [mode, setMode] = useState<Mode>(null);
   const [reason, setReason] = useState("");
   const [why, setWhy] = useState(false);
   const open = f.status === "open" || f.status === "disputed";
-  const isCreator = can(role, "decideFinding") && !locked;
+  const canDecide = can(role, "decideFinding") && !locked;
+  const canEdit = can(role, "editDraft") && !locked;
   const canClear = can(role, "clearClaim") && f.needsReview && open && !locked;
   const canOverride = can(role, "overrideBlocker") && f.severity === "blocker" && open && !locked;
   const isImage = f.start < 0;
@@ -54,6 +63,7 @@ export function FindingCard({
 
   const submit = async () => {
     if (mode === "alt") return onSaveAlt(reason.trim());
+    if (mode === "dismiss") return;
     const status: FindingStatus = mode === "dispute" ? "disputed" : mode === "override" ? "overridden" : "cleared";
     if (await onDecide(status, reason.trim() || undefined)) {
       setMode(null);
@@ -61,7 +71,7 @@ export function FindingCard({
     }
   };
 
-  const mayUndo = !open && !locked && (isCreator || (f.status === "cleared" && can(role, "clearClaim")) || (f.status === "overridden" && can(role, "overrideBlocker")));
+  const mayUndo = !open && !locked && (canDecide || (f.status === "cleared" && can(role, "clearClaim")) || (f.status === "overridden" && can(role, "overrideBlocker")));
 
   return (
     <motion.article
@@ -109,23 +119,42 @@ export function FindingCard({
       )}
 
       <div className="mt-3 flex flex-wrap items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-        {open && isCreator && oneClick && (
+        {open && canEdit && oneClick && (
           <Button size="sm" variant="primary" loading={busy} icon={<Check className="size-3.5" />} onClick={() => onDecide("accepted")}>
             {f.altFix ? "Use this alt text" : "Accept fix"}
           </Button>
         )}
-        {open && isCreator && !oneClick && !isImage && (
+        {open && canEdit && !oneClick && !isImage && (
           <Button size="sm" variant="secondary" disabled={busy} icon={<PencilLine className="size-3.5" />} onClick={onEdit}>
             Edit text
           </Button>
         )}
-        {open && isCreator && f.alt && !f.fix && (
+        {open && canEdit && f.altFix && (
+          <Button
+            size="sm"
+            variant="secondary"
+            disabled={busy}
+            icon={<PencilLine className="size-3.5" />}
+            onClick={() => {
+              setReason(f.fix ?? "");
+              setMode("alt");
+            }}
+          >
+            Edit first
+          </Button>
+        )}
+        {open && canEdit && f.alt && !f.fix && (
           <Button size="sm" variant="secondary" disabled={busy} icon={<PencilLine className="size-3.5" />} onClick={() => setMode(mode === "alt" ? null : "alt")}>
             Write alt text
           </Button>
         )}
-        {open && isCreator && f.severity !== "blocker" && (
-          <Button size="sm" variant="ghost" disabled={busy} icon={<X className="size-3.5" />} onClick={() => onDecide("dismissed")}>
+        {open && canDecide && (!f.fix || isImage) && !f.altFix && (
+          <Button size="sm" variant="secondary" disabled={busy} icon={<Check className="size-3.5" />} onClick={() => onDecide("accepted")}>
+            Agree, needs fixing
+          </Button>
+        )}
+        {open && canDecide && f.severity !== "blocker" && (
+          <Button size="sm" variant="ghost" disabled={busy} icon={<X className="size-3.5" />} onClick={() => setMode(mode === "dismiss" ? null : "dismiss")}>
             Not an issue
           </Button>
         )}
@@ -143,14 +172,6 @@ export function FindingCard({
           <Button size="sm" variant="ghost" disabled={busy} icon={<RotateCcw className="size-3.5" />} onClick={() => onDecide("open")}>
             Undo
           </Button>
-        )}
-        {open && !isCreator && !canClear && !canOverride && !locked && (
-          <>
-            <span className="text-[13px] text-muted">Only the Creator can fix this.</span>
-            <Button size="sm" variant="ghost" onClick={onSwitchToCreator}>
-              Switch to Creator
-            </Button>
-          </>
         )}
         <button
           type="button"
@@ -170,7 +191,7 @@ export function FindingCard({
                 <span className="num text-ash-700">{f.cites.label}</span>: {f.cites.excerpt}
               </p>
               {f.claimStatus && <Pill className={cx("w-fit ring-transparent", CLAIM[f.claimStatus].cls)}>{CLAIM[f.claimStatus].label}</Pill>}
-              {open && isCreator && f.status !== "disputed" && (
+              {open && canDecide && f.status !== "disputed" && (
                 <button type="button" className="w-fit text-[13px] font-medium text-ink underline underline-offset-2" onClick={() => setMode(mode === "dispute" ? null : "dispute")}>
                   Disagree with this? Dispute it
                 </button>
@@ -189,8 +210,47 @@ export function FindingCard({
         </p>
       )}
 
+      {f.calibration && (
+        <div className="mt-2 rounded-md bg-ash-50 px-2.5 py-1.5 text-[13px] text-ink" onClick={(e) => e.stopPropagation()}>
+          <p>
+            <b className="font-medium">{f.calibration.simulated ? "Simulated learning: " : "Learned from your team: "}</b>
+            {f.calibration.note}
+          </p>
+          {f.calibration.action !== "observe" && canDecide && (
+            <button type="button" disabled={busy} className="mt-1 font-medium underline underline-offset-2" onClick={onKeepRule}>
+              Keep this check at full strength
+            </button>
+          )}
+        </div>
+      )}
+
+      {f.carriedFrom != null && (
+        <p className="mt-2 text-[13px] text-muted">Decided on version {f.carriedFrom}. Kept because this has not changed.</p>
+      )}
+
+      {mode === "dismiss" && (
+        <div className="mt-3" onClick={(e) => e.stopPropagation()}>
+          <p className="text-[13px] font-medium text-ink">Why is this not an issue?</p>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {REASONS.map((r) => (
+              <Button
+                key={r.code}
+                size="sm"
+                variant="secondary"
+                disabled={busy}
+                onClick={async () => {
+                  if (await onDecide("dismissed", undefined, r.code)) setMode(null);
+                }}
+              >
+                {r.label}
+              </Button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <AnimatePresence initial={false}>
-        {mode && (
+        {mode && mode !== "dismiss" && (
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="overflow-hidden" onClick={(e) => e.stopPropagation()}>
             <div className="mt-3 grid gap-2">
               <textarea

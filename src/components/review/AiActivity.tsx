@@ -4,7 +4,7 @@ import { CheckCircle2, CircleSlash, RefreshCw, TriangleAlert } from "lucide-reac
 import type { AiCall, AiDisclosure } from "@/lib/types";
 import { Button, cx } from "../ui";
 
-const PASS_NAME: Record<AiCall["pass"], string> = { judgement: "Tone and messaging", image: "Image brand check" };
+const PASS_NAME: Record<AiCall["pass"], string> = { judgement: "Tone and messaging", image: "Image brand check", video: "Words on screen in video" };
 
 const STATE: Record<AiCall["status"], { word: string; cls: string; Icon: typeof CheckCircle2 }> = {
   ran: { word: "AI ran", cls: "bg-lime text-soot", Icon: CheckCircle2 },

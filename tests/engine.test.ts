@@ -108,6 +108,31 @@ describe("pass 2 · claims (Fig. 13b decision tree)", () => {
     expect(best?.fix).toBeNull(); // "customers" is elsewhere in the sentence, not in the claim
   });
 
+  it("does not compare a delivery time with a fact about the number of cities", () => {
+    const { findings, claims } = checkClaims("Delivery in 10 minutes.", kit, TODAY);
+    expect(claims[0].status).toBe("unsupported");
+    expect(findings.every((f) => f.fix === null)).toBe(true);
+    expect(findings.some((f) => f.message.includes("says 40"))).toBe(false);
+  });
+
+  it("keeps comparing a measure when the fact itself uses that measure", () => {
+    const withMinutes = { ...kit, facts: [{ ...kit.facts[0], statement: "Delivery in 30 minutes", value: 30 }] };
+    expect(checkClaims("Delivery in 10 minutes.", withMinutes, TODAY).claims[0].status).toBe("contradicted");
+  });
+
+  it("does not accept a price in another currency as support", () => {
+    const { claims } = checkClaims("Free delivery on orders above $199.", kit, TODAY);
+    expect(claims[0].status).toBe("unsupported");
+  });
+
+  it("treats Rs and the rupee sign as the same currency", () => {
+    expect(checkClaims("Free delivery on orders above Rs 199.", kit, TODAY).claims[0].status).toBe("supported");
+  });
+
+  it("keeps Hindi words whole in a claim's quote", () => {
+    expect(extractClaims("हमारे 2 लाख ग्राहक खुश हैं।", kit)[0].quote).toBe("2 लाख ग्राहक");
+  });
+
   it("does not treat years as claims", () => {
     expect(extractClaims("Our Diwali 2026 range is here.")).toHaveLength(0);
   });

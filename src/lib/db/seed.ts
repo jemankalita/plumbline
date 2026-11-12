@@ -1,7 +1,8 @@
 // Demo data: a fictional quick-commerce brand, "QuickKart". Not a real company.
 
-import type { BrandKit, ImageInput, Rule } from "../types";
+import type { BrandKit, ImageInput, ReasonCode, Rule } from "../types";
 import { DIWALI_IMAGE } from "./demo-image-data";
+import { QUICKKART_LOGO } from "./demo-logo";
 
 /** Rules only the AI image pass can judge, because they need someone to look at the picture. */
 export const VISION_RULES: Rule[] = [
@@ -64,6 +65,7 @@ export const DEMO_KIT: BrandKit = {
     { name: "Cloud", hex: "#F4F7FB" },
     { name: "White", hex: "#FFFFFF" },
   ],
+  logos: [QUICKKART_LOGO],
   rules: [
     {
       id: "R-1.1",
@@ -187,6 +189,51 @@ export const DEMO_KIT: BrandKit = {
       check: { kind: "palette", maxDistance: 22 },
     },
     ...VISION_RULES,
+    {
+      id: "R-6.7",
+      section: "6.7",
+      title: "Don't stretch the logo",
+      text: "The logo keeps its original proportions. Never stretch or squeeze it.",
+      category: "visual",
+      severity: "warning",
+      check: { kind: "logoDistortion" },
+    },
+    {
+      id: "R-6.8",
+      section: "6.8",
+      title: "Don't recolour the logo",
+      text: "The logo stays in its original colour.",
+      category: "visual",
+      severity: "warning",
+      check: { kind: "logoColour" },
+    },
+    {
+      id: "R-6.9",
+      section: "6.9",
+      title: "Give the logo room",
+      text: "Keep clear space around the logo of at least a quarter of its height.",
+      category: "visual",
+      severity: "warning",
+      check: { kind: "logoClearSpace" },
+    },
+    {
+      id: "R-7.1",
+      section: "7.1",
+      title: "Right shape for short video",
+      text: "Reels and Shorts are vertical 9:16 and stay inside the channel's time limit.",
+      category: "visual",
+      severity: "warning",
+      check: { kind: "videoFormat" },
+    },
+    {
+      id: "R-7.2",
+      section: "7.2",
+      title: "Keep disclaimers readable",
+      text: "Legal disclaimers such as T&C stay on screen for at least 3 seconds.",
+      category: "legal",
+      severity: "warning",
+      check: { kind: "minOnScreen", pattern: "t&c|t & c|terms (and|&) conditions|terms apply|conditions apply", seconds: 3 },
+    },
   ],
   terms: [
     { id: "T-1", preferred: "QuickKart", banned: ["Quick-Kart", "Quick Kart", "Quickkart", "QuikKart", "Quick Cart"], note: "One word, capital Q and K." },
@@ -218,18 +265,18 @@ export const DEMO_KIT: BrandKit = {
       statement: "Rated 4.6 on the Play Store",
       keywords: ["rated", "rating", "stars"],
       value: 4.6,
-      source: "Play Store listing, Jul 2026",
+      source: "Play Store listing, Jul 2026 (left expired on purpose for this demo)",
       owner: "Product team",
       expiresOn: "2026-10-31",
     },
     {
       id: "F4",
-      statement: "Up to 50% off in the Diwali Sale, 1–10 Nov 2026",
+      statement: "Up to 50% off in the Winter Sale, 1–31 Dec 2026",
       keywords: ["off", "sale", "discount"],
       value: 50,
-      source: "Campaign brief DS-26",
+      source: "Campaign brief WS-26",
       owner: "Marketing team",
-      expiresOn: "2026-11-10",
+      expiresOn: "2026-12-31",
     },
     {
       id: "F5",
@@ -253,7 +300,7 @@ export interface SeedSubmission {
   image?: ImageInput;
   daysAgo: number;
   /** Decisions to replay after review, by rule/term id → status (for Insights and the Gap Finder). */
-  decisions?: { cite: string; status: "accepted" | "dismissed" | "overridden" | "cleared"; reason?: string }[];
+  decisions?: { cite: string; status: "accepted" | "dismissed" | "cleared"; reason?: string; reasonCode?: ReasonCode }[];
 }
 
 export const DEMO_SUBMISSIONS: SeedSubmission[] = [
@@ -274,7 +321,7 @@ export const DEMO_SUBMISSIONS: SeedSubmission[] = [
     keyMessage: "free delivery on first order",
     status: "approved",
     daysAgo: 6,
-    decisions: [{ cite: "R-3.4", status: "dismissed", reason: "FREE is part of the offer name in the email header." }],
+    decisions: [{ cite: "R-3.4", status: "dismissed", reasonCode: "valid_but_exception", reason: "FREE is part of the offer name in the email header." }],
     text: "Welcome to QuickKart. Your first order comes with FREE delivery on orders above ₹199. Groceries, snacks and Diwali essentials reach you in minutes, across 40+ cities.",
   },
   {
@@ -284,7 +331,7 @@ export const DEMO_SUBMISSIONS: SeedSubmission[] = [
     keyMessage: null,
     status: "changes_requested",
     daysAgo: 4,
-    decisions: [{ cite: "R-3.4", status: "dismissed", reason: "DIWALI is the campaign name, caps are approved." }],
+    decisions: [{ cite: "R-3.4", status: "dismissed", reasonCode: "valid_but_exception", reason: "DIWALI is the campaign name, caps are approved." }],
     text: "QuickKart is rated 4.6 stars by our customers. Shop the DIWALI store for sweets, lights and gifts. Our delivery boys bring it to your door, risk-free.",
   },
   {
@@ -294,7 +341,7 @@ export const DEMO_SUBMISSIONS: SeedSubmission[] = [
     keyMessage: "we are hiring delivery partners",
     status: "draft",
     daysAgo: 2,
-    decisions: [{ cite: "R-3.4", status: "overridden", reason: "HIRING in caps is our recruitment format." }],
+    decisions: [{ cite: "R-3.4", status: "dismissed", reasonCode: "valid_but_exception", reason: "HIRING in caps is our recruitment format." }],
     text: "We are HIRING delivery partners in Pune and Guwahati. Flexible hours, weekly payouts and insurance from day one. Apply in the QuickKart Partner app.",
   },
 ];

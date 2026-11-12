@@ -1,11 +1,11 @@
 import { NewDraftForm } from "@/components/NewDraftForm";
 import { can } from "@/lib/auth-shared";
-import { currentRole } from "@/lib/auth";
+import { currentSession } from "@/lib/auth";
 
 export const metadata = { title: "New draft" };
 
 export default async function NewDraftPage() {
-  const role = await currentRole();
+  const { role } = await currentSession();
   return (
     <div className="grid gap-6">
       <div>

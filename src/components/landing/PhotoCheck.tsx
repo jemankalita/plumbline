@@ -7,8 +7,11 @@ import { prepareDemoImage, prepareImage } from "@/lib/image-prep";
 import type { ImageInput, ReviewResult } from "@/lib/types";
 import { ImageChecks, VERDICT } from "../review/ImagePanel";
 import { aiSummary } from "../review/AiActivity";
+import { AiWorking } from "../AiWorking";
 import { api, cx, ErrorNote, Pill, ScoreRing, SeverityBadge } from "../ui";
+import { EmptyResult } from "./EmptyResult";
 import { Reveal } from "./Landing";
+import { WordsReveal } from "./Motion";
 
 type Picked = { image: ImageInput; preview: string };
 
@@ -44,7 +47,7 @@ export function PhotoCheck({ aiOn }: { aiOn: boolean }) {
   return (
     <section id="photos" className="scroll-mt-4 bg-ash-50 px-[var(--margin)] py-[clamp(72px,8vw,128px)] text-soot">
       <Reveal>
-        <h2 className="display text-[36px] lg:text-[clamp(40px,4.4vw,64px)]">Check a photo</h2>
+        <WordsReveal className="display text-[36px] lg:text-[clamp(40px,4.4vw,64px)]" text="Check a photo" />
         <p className="mt-4 max-w-[60ch] text-[17px] leading-[1.55] lg:text-[18px]">
           {aiOn
             ? "AI looks at the picture and judges it against the Brand Kit's image rules. It reads any words too, and plain code checks those for wrong names and unproven claims. Nothing is saved."
@@ -96,10 +99,10 @@ export function PhotoCheck({ aiOn }: { aiOn: boolean }) {
         </Reveal>
 
         <Reveal i={2}>
-          <div data-ui className="min-h-[320px] bg-white p-5" aria-live="polite">
+          <div data-ui className={cx("bg-white p-5", (busy || res) && "min-h-[320px]")} aria-live="polite">
             <ErrorNote error={error} />
-            {busy && <Working picked={picked} />}
-            {!busy && !res && !error && <p className="text-[17px] text-muted">Pick a picture to run a live check.</p>}
+            {busy && <Working picked={picked} aiOn={aiOn} />}
+            {!busy && !res && !error && <EmptyResult title="Pick a picture to run a live check." rows={["Colours against the palette", "Logo shape and clear space", "Alt text and words in the image"]} />}
             {!busy && res && (
               <div className="grid gap-4">
                 <div className="flex flex-wrap items-center gap-3">
@@ -136,21 +139,22 @@ export function PhotoCheck({ aiOn }: { aiOn: boolean }) {
         </Reveal>
       </div>
 
-      <p className="mt-6 max-w-[68ch] text-[14px] text-muted">Photos today. Video, Instagram Reels and YouTube Shorts are planned for Round 3.</p>
+      <p className="mt-6 max-w-[68ch] text-[14px] text-muted">Photos and video, including Instagram Reels and YouTube Shorts. For video, AI reads the words on screen from still frames, and it does not hear speech.</p>
     </section>
   );
 }
 
-function Working({ picked }: { picked: Picked | null }) {
+function Working({ picked, aiOn }: { picked: Picked | null; aiOn: boolean }) {
   return (
-    <div className="grid gap-3">
-      {picked?.preview && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={picked.preview} alt="" className="max-h-[220px] w-full object-cover opacity-70" />
-      )}
-      <p className="flex items-center gap-2 text-[16px]">
-        <Bot className="size-4 animate-pulse" aria-hidden /> AI is looking at the picture…
-      </p>
-    </div>
+    <AiWorking
+      images={picked?.preview ? [picked.preview] : []}
+      title={aiOn ? "AI is looking at the picture" : "Checking colours and alt text"}
+      checks={
+        aiOn
+          ? ["Judging it against the kit's image rules", "Reading any words on the picture", "Looking for the brand's logo", "Comparing its colours with the palette"]
+          : ["Comparing its colours with the palette", "Checking the alt text"]
+      }
+      hint={aiOn ? "Usually 5 to 25 seconds. Nothing is saved." : "Takes about a second. Nothing is saved."}
+    />
   );
 }

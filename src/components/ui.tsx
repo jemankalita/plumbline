@@ -1,8 +1,8 @@
 "use client";
 
-import { animate, motion, useMotionValue, useTransform } from "motion/react";
+import { animate, motion, useInView, useMotionValue, useReducedMotion, useTransform } from "motion/react";
 import { ChevronDown, Loader2 } from "lucide-react";
-import { forwardRef, useEffect, type ButtonHTMLAttributes, type ReactNode } from "react";
+import { cloneElement, forwardRef, isValidElement, useEffect, useId, useRef, type ButtonHTMLAttributes, type ReactElement, type ReactNode } from "react";
 import type { ClaimStatus, FindingStatus, IssueType, Severity, SubmissionStatus } from "@/lib/types";
 
 export function cx(...c: (string | false | null | undefined)[]) {
@@ -181,7 +181,7 @@ export function Logo({ className, tone = "ink" }: { className?: string; tone?: "
         <rect x="6.4" y="0" width="1.2" height="12" fill={c} />
         <path d="M7 11 L12 17 L7 24 L2 17 Z" fill="var(--color-lime)" stroke={c} strokeWidth="1.2" strokeLinejoin="round" />
       </svg>
-      <span className="text-[21px] font-semibold leading-none tracking-[-0.04em]" style={{ color: c }}>
+      <span className="font-sans text-[21px] font-semibold leading-none tracking-[-0.04em]" style={{ color: c }}>
         Plumbline
       </span>
     </span>
@@ -207,12 +207,16 @@ export function Fold({ title, icon, defaultOpen, children }: { title: string; ic
 }
 
 export function Field({ label, hint, children, htmlFor }: { label: string; hint?: string; children: ReactNode; htmlFor?: string }) {
+  const generatedId = useId();
+  // Link the label to a single control automatically, so a screen reader announces the field's name.
+  const control = !htmlFor && isValidElement(children) ? (children as ReactElement<{ id?: string }>) : null;
+  const controlId = control ? (control.props.id ?? generatedId) : htmlFor;
   return (
     <div className="grid gap-1.5">
-      <label htmlFor={htmlFor} className="text-[14px] font-medium text-ink">
+      <label htmlFor={controlId} className="text-[14px] font-medium text-ink">
         {label}
       </label>
-      {children}
+      {control ? cloneElement(control, { id: controlId }) : children}
       {hint && <p className="text-[13px] text-muted">{hint}</p>}
     </div>
   );
@@ -244,4 +248,29 @@ export function timeAgo(iso: string): string {
   if (h < 24) return `${h} h ago`;
   const d = Math.round(h / 24);
   return d === 1 ? "yesterday" : `${d} days ago`;
+}
+
+/**
+ * A number that counts up once it scrolls into view (after Magic UI's Number Ticker).
+ * Server pages can use it; it renders the final value for no-JS and reduced-motion readers.
+ */
+export function NumberTicker({ value, className }: { value: number; className?: string }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const inView = useInView(ref, { once: true, amount: 0.6 });
+  const reduce = useReducedMotion();
+  const mv = useMotionValue(reduce ? value : 0);
+  const shown = useTransform(mv, (v) => Math.round(v).toLocaleString("en-IN"));
+  useEffect(() => {
+    if (!inView || reduce) {
+      if (reduce) mv.set(value);
+      return;
+    }
+    const c = animate(mv, value, { duration: 1.1, ease: [0.22, 1, 0.36, 1] });
+    return () => c.stop();
+  }, [inView, reduce, mv, value]);
+  return (
+    <motion.span ref={ref} className={cx("num tabular-nums", className)} aria-label={String(value)}>
+      {shown}
+    </motion.span>
+  );
 }

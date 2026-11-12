@@ -52,3 +52,9 @@ apikey.txt
 # design working files and raw image downloads (optimised copies live in public/media)
 .taste-skill/
 assets/
+
+eval/.cache/
+
+# browser test output
+/test-results/
+/playwright-report/

@@ -1,11 +1,11 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
-import { BarChart3, BookMarked, Check, ChevronDown, Inbox, Menu, PenLine, ScrollText, X } from "lucide-react";
+import { BarChart3, BookMarked, Check, ChevronDown, Inbox, Menu, PenLine, ScrollText, X, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
-import { ROLES } from "@/lib/auth-shared";
+import { ORGS, ROLES } from "@/lib/auth-shared";
 import type { Role } from "@/lib/types";
 import { AiStatus } from "./AiStatus";
 import { api, cx, Logo } from "./ui";
@@ -16,9 +16,10 @@ const NAV = [
   { href: "/kit", label: "Brand Kit", icon: BookMarked },
   { href: "/insights", label: "Insights", icon: BarChart3 },
   { href: "/audit", label: "Audit log", icon: ScrollText },
+  { href: "/trust", label: "How accurate", icon: ShieldCheck },
 ];
 
-export function Shell({ role, status, children }: { role: Role; status: { ai: boolean; db: "supabase" | "file" }; children: ReactNode }) {
+export function Shell({ role, kitId, status, children }: { role: Role; kitId: string; status: { ai: boolean; db: "supabase" | "file" | "none" }; children: ReactNode }) {
   const path = usePathname();
   // The mobile menu belongs to the page it was opened on, so navigating closes it.
   const [openOn, setOpenOn] = useState<string | null>(null);
@@ -79,9 +80,14 @@ export function Shell({ role, status, children }: { role: Role; status: { ai: bo
             <Logo />
           </Link>
           <div className="ml-auto">
-            <RoleSwitcher role={role} />
+            <RoleSwitcher role={role} kitId={kitId} />
           </div>
         </header>
+        {status.db === "none" && (
+          <p role="alert" className="bg-amber-50 px-4 py-2.5 text-[14px] text-amber-700 sm:px-8">
+            Saving is switched off because this site has no database connected. You can still try the checks.
+          </p>
+        )}
         <main className="mx-auto w-full max-w-[1320px] px-4 py-6 sm:px-8 lg:py-10">{children}</main>
       </div>
 
@@ -112,12 +118,14 @@ export function Shell({ role, status, children }: { role: Role; status: { ai: bo
   );
 }
 
-function RoleSwitcher({ role }: { role: Role }) {
+function RoleSwitcher({ role, kitId }: { role: Role; kitId: string }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
+  const [problem, setProblem] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   const current = ROLES.find((r) => r.id === role)!;
+  const org = ORGS.find((o) => o.id === kitId) ?? ORGS[0];
 
   useEffect(() => {
     const onDoc = (e: MouseEvent) => !ref.current?.contains(e.target as Node) && setOpen(false);
@@ -130,13 +138,20 @@ function RoleSwitcher({ role }: { role: Role }) {
     };
   }, []);
 
-  const pick = (id: Role) => {
-    setOpen(false);
+  const signIn = (body: { role: Role; kitId?: string }) => {
+    setProblem(null);
     start(async () => {
-      await api("/api/role", { body: { role: id } });
-      router.refresh();
+      try {
+        await api("/api/role", { body });
+        setOpen(false);
+        router.refresh();
+      } catch {
+        setProblem("Couldn't switch. Please try again.");
+      }
     });
   };
+
+  const pick = (id: Role) => signIn({ role: id });
 
   return (
     <div className="relative" ref={ref}>
@@ -149,7 +164,7 @@ function RoleSwitcher({ role }: { role: Role }) {
         <span className="grid size-8 place-items-center rounded-md bg-soot font-display text-[15px] font-semibold text-lime">{current.name[0]}</span>
         <span className="hidden leading-tight sm:block">
           <span className="block text-[13px] font-medium text-ink">{current.person}</span>
-          <span className="block text-[13px] text-muted">Acting as {current.name}</span>
+          <span className="block text-[13px] text-muted">{org.name} · {current.name}</span>
         </span>
         <ChevronDown className={cx("size-4 text-muted transition-transform", open && "rotate-180", pending && "animate-pulse")} />
       </button>
@@ -163,6 +178,21 @@ function RoleSwitcher({ role }: { role: Role }) {
             transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
             className="absolute right-0 top-13 z-40 w-[340px] origin-top-right rounded-lg bg-white p-1.5 shadow-lift"
           >
+            <p className="px-2.5 pb-1 pt-2 kicker">Organisation</p>
+            <div className="grid grid-cols-2 gap-1 px-1.5 pb-1">
+              {ORGS.map((o) => (
+                <button
+                  key={o.id}
+                  role="menuitemradio"
+                  aria-checked={o.id === kitId}
+                  onClick={() => o.id !== kitId && signIn({ role: role === "admin" ? "creator" : role, kitId: o.id })}
+                  className={cx("rounded-md px-2.5 py-2 text-left text-[13px] transition-colors", o.id === kitId ? "bg-soot text-white" : "bg-ash-50 text-ink hover:bg-ash-100")}
+                >
+                  <span className="block font-medium">{o.name}</span>
+                  <span className={cx("block", o.id === kitId ? "text-ash-300" : "text-muted")}>{o.blurb}</span>
+                </button>
+              ))}
+            </div>
             <p className="px-2.5 pb-1 pt-2 kicker">Demo sign-in · switch role</p>
             {ROLES.map((r) => (
               <button
@@ -184,6 +214,7 @@ function RoleSwitcher({ role }: { role: Role }) {
                 </span>
               </button>
             ))}
+            {problem && <p role="alert" className="px-2.5 pb-2 text-[13px] text-red">{problem}</p>}
           </motion.div>
         )}
       </AnimatePresence>

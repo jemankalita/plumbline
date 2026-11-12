@@ -1,0 +1,44 @@
+{
+  "logo": {
+    "clean": {
+      "total": 10,
+      "passed": 10,
+      "unmeasurable": 0
+    },
+    "stretched": {
+      "total": 10,
+      "caught": 10,
+      "unmeasurable": 0
+    },
+    "recoloured": {
+      "total": 10,
+      "caught": 10,
+      "unmeasurable": 0
+    }
+  },
+  "clearSpace": {
+    "clean": {
+      "total": 10,
+      "passed": 10
+    },
+    "intruded": {
+      "total": 10,
+      "caught": 10
+    }
+  },
+  "palette": {
+    "onPalette": {
+      "total": 10,
+      "correct": 10
+    },
+    "offPalette": {
+      "total": 10,
+      "correct": 10
+    }
+  },
+  "limits": [
+    "Pictures are generated, not real campaign art.",
+    "The logo's position is given to the check. How well AI finds a logo in a real picture is not measured.",
+    "Clear space is tested on plain backgrounds. A busy photo can look like clutter, so those findings go to a person."
+  ]
+}

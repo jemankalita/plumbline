@@ -1,5 +1,7 @@
+import { currentSession } from "@/lib/auth";
 import Link from "next/link";
 import { listAudit } from "@/lib/db/repo";
+import { auditLabel, tidyDetail } from "@/lib/audit-labels";
 
 export const metadata = { title: "Audit log" };
 
@@ -16,7 +18,8 @@ const TONE: Record<string, string> = {
 };
 
 export default async function AuditPage() {
-  const entries = await listAudit(300);
+  const { kitId } = await currentSession();
+  const entries = await listAudit(kitId, 300);
   return (
     <div className="grid gap-6">
       <div>
@@ -43,9 +46,9 @@ export default async function AuditPage() {
                     <td className="num whitespace-nowrap px-5 py-3 text-muted">{fmt.format(new Date(e.at))}</td>
                     <td className="px-3 py-3 capitalize text-ink">{e.role}</td>
                     <td className="whitespace-nowrap px-3 py-3">
-                      <span className="inline-flex items-center gap-1.5 num text-[13px] text-ink">
+                      <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-ink" title={e.action}>
                         <span className={`size-1.5 rounded-full ${TONE[key] ?? "bg-ash-400"}`} aria-hidden />
-                        {e.action}
+                        {auditLabel(e.action)}
                       </span>
                     </td>
                     <td className="px-5 py-3 text-ink">
@@ -54,7 +57,7 @@ export default async function AuditPage() {
                           {e.title}
                         </Link>
                       )}
-                      {e.detail}
+                      {tidyDetail(e.detail)}
                     </td>
                   </tr>
                 );

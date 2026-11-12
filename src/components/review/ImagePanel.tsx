@@ -75,8 +75,12 @@ export function ImagePanel({
       <div className="grid gap-4 p-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
         <div className="grid content-start gap-2">
           {image.thumbnail ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={image.thumbnail} alt={image.altText || "Uploaded image, no alt text yet"} className="w-full rounded-md border border-line object-cover" />
+            <div className="relative overflow-hidden rounded-md" aria-busy={busy}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={image.thumbnail} alt={image.altText || "Uploaded image, no alt text yet"} className={cx("w-full rounded-md border border-line object-cover transition-opacity", busy && "opacity-80")} />
+              {busy && <span className="scan-line" aria-hidden />}
+              {busy && <span className="absolute bottom-2 left-2 rounded bg-soot/85 px-1.5 py-0.5 text-[12px] text-white">Checking again…</span>}
+            </div>
           ) : (
             <div className="flex aspect-[3/2] overflow-hidden rounded-md border border-line">
               {image.colors.map((c) => (

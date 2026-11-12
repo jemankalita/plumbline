@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { BadRequest, handle, NotFound, ok, parseBody } from "@/lib/api";
-import { requireRole } from "@/lib/auth";
+import { currentSession, requireSession } from "@/lib/auth";
 import { ConflictError } from "@/lib/db/store";
 import { getSubmission, setStatus } from "@/lib/db/repo";
 
@@ -13,16 +13,17 @@ const body = z.object({
 export const POST = handle(async (req: Request, ctx: RouteContext<"/api/submissions/[id]/status">) => {
   const { id } = await ctx.params;
   const { action, note } = await parseBody(req, body);
-  const detail = await getSubmission(id);
+  const { kitId } = await currentSession();
+  const detail = await getSubmission(kitId, id);
   if (!detail) throw new NotFound("Submission not found.");
   const open = detail.findings.filter((f) => f.status === "open" || f.status === "disputed");
 
   if (action === "send") {
-    const role = await requireRole("submit");
-    await setStatus(id, "in_review", role, note ?? null);
+    const { role } = await requireSession("submit");
+    await setStatus(kitId, id, "in_review", role, note ?? null);
   }
   if (action === "approve") {
-    const role = await requireRole("approve");
+    const { role } = await requireSession("approve");
     const blockers = open.filter((f) => f.severity === "blocker");
     if (blockers.length) {
       throw new ConflictError(
@@ -34,12 +35,12 @@ export const POST = handle(async (req: Request, ctx: RouteContext<"/api/submissi
       throw new ConflictError(`${routed.length} claim${routed.length > 1 ? "s need" : " needs"} a reviewer to clear ${routed.length > 1 ? "them" : "it"} first.`);
     }
     const warnings = open.filter((f) => f.severity === "warning").length;
-    await setStatus(id, "approved", role, warnings ? `${warnings} warning(s) acknowledged.` : note ?? null);
+    await setStatus(kitId, id, "approved", role, warnings ? `${warnings} warning(s) acknowledged.` : note ?? null);
   }
   if (action === "request_changes") {
-    const role = await requireRole("approve");
+    const { role } = await requireSession("approve");
     if (!note || note.length < 5) throw new BadRequest("Tell the creator what to change.");
-    await setStatus(id, "changes_requested", role, note);
+    await setStatus(kitId, id, "changes_requested", role, note);
   }
   return ok({ id });
 });

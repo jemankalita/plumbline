@@ -2,18 +2,22 @@
 // Deterministic passes always run. The AI pass runs only when a provider is configured,
 // and every AI finding must survive the verifier before a person sees it.
 
-import type { LlmProvider } from "../ai/gemini";
-import type { AiCall, BrandKit, Finding, ImageInput, ReviewResult } from "../types";
+import { ROUTE_AI_DEADLINE_MS, type LlmProvider } from "../ai/gemini";
+import type { AiCall, BrandKit, Finding, ImageInput, ReviewResult, VideoInput } from "../types";
+import { altProblem } from "./alt";
 import { checkClaims } from "./claims";
+import { mergeImageEchoes } from "./echo";
 import { checkImage, checkTerms, checkTextRules } from "./rules";
 import { redact } from "./text";
 import { breaksIntent, score, verifyAiFindings, type RawAiFinding } from "./verify";
+import { checkVideo, type VideoCheck } from "./video";
 import { visionPass, visionRules, type VisionResult } from "./vision";
 
 export interface ReviewInput {
   text: string;
   kit: BrandKit;
   image?: ImageInput | null;
+  video?: VideoInput | null;
   keyMessage?: string | null;
   channel?: string;
   provider?: LlmProvider | null;
@@ -54,7 +58,7 @@ async function judgementPass(input: ReviewInput, existing: Finding[]): Promise<J
       `Channel: ${input.channel ?? "unspecified"}\n` +
       (input.keyMessage ? `Key message that must survive: ${input.keyMessage}\n` : "") +
       `<draft>\n${redaction.text}\n</draft>`;
-    const res = await provider.json<{ findings?: RawAiFinding[] }>(judgementSystem(kit), [{ text: prompt }]);
+    const res = await provider.json<{ findings?: RawAiFinding[] }>(judgementSystem(kit), [{ text: prompt }], { deadlineMs: ROUTE_AI_DEADLINE_MS });
     const { kept, dropped } = verifyAiFindings(res.findings ?? [], text, redaction, kit, existing);
     return { findings: kept, dropped, redacted: redaction.count };
   } catch (e) {
@@ -103,6 +107,12 @@ function imageCall(input: ReviewInput, vision: VisionResult | null, error: strin
   };
 }
 
+function videoCall(checked: VideoCheck | null): AiCall | null {
+  if (!checked) return null;
+  const { read, frames, tracks } = checked.report;
+  return { pass: "video", status: read.status, model: read.model, ms: read.ms, sent: "Still frames from the video, never the video file", returned: read.status === "ran" ? `${plural(tracks.length, "on-screen caption")} found. ${plural(frames.length, "frame")} kept as evidence` : read.note };
+}
+
 export async function runReview(input: ReviewInput): Promise<ReviewResult> {
   const t0 = Date.now();
   const { text, kit } = input;
@@ -110,6 +120,7 @@ export async function runReview(input: ReviewInput): Promise<ReviewResult> {
   const pass1 = [...checkTerms(text, kit), ...checkTextRules(text, kit)];
   const { findings: pass2, claims } = checkClaims(text, kit, input.today);
   const imageFindings = checkImage(input.image, kit);
+  const videoChecked = input.video ? checkVideo(input.video, kit, input.channel, input.today) : null;
   const deterministic = [...pass1, ...pass2];
 
   const wantsVision = !!input.provider && !!input.image?.thumbnail && visionRules(kit).length > 0;
@@ -120,7 +131,7 @@ export async function runReview(input: ReviewInput): Promise<ReviewResult> {
   const ai: JudgementResult = judged.value ?? { findings: [], dropped: 0, redacted: 0, error: judged.error ?? "AI pass failed" };
   const vision = seen.value;
 
-  const altNeeded = !input.image?.altText?.trim();
+  const altNeeded = !!altProblem(input.image?.altText);
   const kindOf = (id: string) => kit.rules.find((r) => r.id === id)?.check?.kind;
   // Two dominant colours are only an estimate of legibility. When AI has read the actual words, use that.
   const aiJudgedWords = vision?.report.checks.some((c) => kit.rules.find((r) => r.id === c.ruleId)?.category === "accessibility");
@@ -131,18 +142,19 @@ export async function runReview(input: ReviewInput): Promise<ReviewResult> {
       return vision?.alt && altNeeded ? { ...f, alt: true, fix: vision.alt, altFix: true, ai: true } : { ...f, alt: true };
     });
 
-  const findings = [...deterministic, ...ai.findings, ...image, ...(vision?.findings ?? [])]
+  const findings = mergeImageEchoes([...deterministic, ...ai.findings, ...image, ...(vision?.findings ?? []), ...(videoChecked?.findings ?? [])])
     .map((f) => ({ ...f, fixBreaksIntent: breaksIntent(text, f, input.keyMessage) }))
     .sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity] || a.start - b.start);
 
-  const calls = [judgementCall(input, ai, judged.ms), imageCall(input, vision, seen.error, seen.ms)].filter((c): c is AiCall => c !== null);
+  const calls = [judgementCall(input, ai, judged.ms), imageCall(input, vision, seen.error, seen.ms), videoCall(videoChecked)].filter((c): c is AiCall => c !== null);
   const passes = calls.filter((c) => c.status === "ran").map((c) => c.pass);
 
   const notes: string[] = [];
   if (!input.provider) notes.push("AI pass off (no provider configured). Rules, claims and image checks ran.");
-  for (const c of calls) if (c.status === "failed") notes.push(`AI pass failed for the ${c.pass === "image" ? "image" : "text"} check, so only plain-code checks stand (${c.returned}).`);
+  for (const c of calls) if (c.status === "failed") notes.push(`AI pass failed for the ${c.pass === "judgement" ? "text" : c.pass} check, so only plain-code checks stand (${c.returned}).`);
   if (passes.includes("judgement")) notes.push(`Tone and messaging judged by AI against this brand's rules; ${ai.redacted} personal-data item(s) masked first.`);
   if (passes.includes("image")) notes.push("AI looked at the image and judged it against the kit's image rules.");
+  if (passes.includes("video")) notes.push("AI read the words on screen from sampled frames. It does not hear speech.");
 
   return {
     findings,
@@ -150,6 +162,7 @@ export async function runReview(input: ReviewInput): Promise<ReviewResult> {
     score: score(findings),
     ai: { provider: passes.length ? input.provider!.name : null, passes, note: notes.join(" "), calls },
     imageReport: vision?.report ?? null,
+    video: videoChecked?.report ?? null,
     dropped: ai.dropped + (vision?.dropped ?? 0),
     durationMs: Date.now() - t0,
   };

@@ -1,7 +1,9 @@
 // Pass 1 — deterministic checks. Exact, explainable, and always cite a Brand Kit record.
 
 import type { BrandKit, Finding, ImageInput, Rule } from "../types";
+import { altProblem } from "./alt";
 import { contrast, hexToRgb, nearest, type RGB } from "./color";
+import { judgeAreas } from "./palette";
 import { escapeRegex, findAll, sentences, uid, wordCount } from "./text";
 
 function ruleCite(rule: Rule) {
@@ -76,7 +78,7 @@ export function checkTextRules(text: string, kit: BrandKit): Finding[] {
         continue; // a bad pattern in the kit must never crash a review
       }
       for (const m of text.matchAll(re)) {
-        if (!m[0]) continue;
+        if (!m[0] || isAcceptedAcronym(m[0], text, kit)) continue;
         const start = m.index ?? 0;
         out.push(base(rule, start, start + m[0].length, m[0], rule.title, check.fix ?? null));
       }
@@ -91,6 +93,13 @@ export function checkTextRules(text: string, kit: BrandKit): Finding[] {
     }
   }
   return out;
+}
+
+/** A capitalised word the kit uses, or that the draft spells out in brackets, is an acronym rather than shouting. */
+function isAcceptedAcronym(word: string, text: string, kit: BrandKit): boolean {
+  if (!/^[A-Z]{2,}$/.test(word)) return false;
+  const kitWords = kit.terms.flatMap((t) => t.preferred.split(/[^\p{L}]+/u));
+  return kitWords.includes(word) || text.includes(`(${word})`);
 }
 
 const SUPERLATIVES = [
@@ -112,11 +121,16 @@ const SUPERLATIVES = [
   "leading",
 ];
 
+// "best regards" and "leading to" use the words without claiming anything.
+const NOT_A_CLAIM_AFTER = /^\s+(?:regards|wishes|practices?|to|up\s+to)\b/i;
+
 /** Superlative phrases that need evidence. Returned as candidate claims for pass 2. */
 export function superlativeSpans(text: string): { start: number; end: number; phrase: string }[] {
   const out: { start: number; end: number; phrase: string }[] = [];
   for (const p of SUPERLATIVES) {
-    for (const span of findAll(text, p)) out.push({ ...span, phrase: text.slice(span.start, span.end) });
+    for (const span of findAll(text, p)) {
+      if (!NOT_A_CLAIM_AFTER.test(text.slice(span.end, span.end + 16))) out.push({ ...span, phrase: text.slice(span.start, span.end) });
+    }
   }
   return out.sort((a, b) => a.start - b.start);
 }
@@ -137,9 +151,8 @@ export function checkImage(image: ImageInput | null | undefined, kit: BrandKit):
   for (const rule of kit.rules) {
     const check = rule.check;
     if (!check) continue;
-    if (check.kind === "altText" && !(image.altText ?? "").trim()) {
-      out.push(imgFinding(rule, "Image has no alt text, so screen-reader users get nothing."));
-    }
+    const altIssue = check.kind === "altText" ? altProblem(image.altText) : null;
+    if (altIssue) out.push(imgFinding(rule, altIssue));
     if (check.kind === "contrast" && colors.length >= 2) {
       const ratio = contrast(colors[0], colors[1]);
       if (ratio < check.min) {
@@ -154,7 +167,20 @@ export function checkImage(image: ImageInput | null | undefined, kit: BrandKit):
         );
       }
     }
-    if (check.kind === "palette" && palette.length) {
+    if (check.kind === "palette" && palette.length && image.colorAreas) {
+      const hexes = kit.palette.map((p) => p.hex);
+      const { off, near } = judgeAreas(image.colorAreas, hexes);
+      const worst = off[0] ?? near[0];
+      if (worst) {
+        const percent = (share: number) => `${Math.round(share * 100)}%`;
+        const parts = [
+          ...off.map((a) => `${a.hex} covers ${percent(a.share)} of the image and is not a brand colour.`),
+          ...near.map((a) => `${a.hex} covers ${percent(a.share)} and is close to ${kit.palette[a.nearest].name}, but not the same.`),
+        ];
+        out.push(imgFinding(rule, parts.join(" "), `Closest brand colour: ${kit.palette[worst.nearest].name} ${kit.palette[worst.nearest].hex}`));
+      }
+    }
+    if (check.kind === "palette" && palette.length && !image.colorAreas) {
       const off = colors
         .map((c, i) => ({ hex: image.colors[i], ...nearest(c, palette) }))
         .filter((c) => c.distance > check.maxDistance);

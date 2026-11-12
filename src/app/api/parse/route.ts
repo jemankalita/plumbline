@@ -1,4 +1,5 @@
-import { BadRequest, handle, ok } from "@/lib/api";
+import { BadRequest, enforceLimits, handle, ok } from "@/lib/api";
+import { clientKey, LIMITS } from "@/lib/rate-limit";
 
 export const maxDuration = 30;
 
@@ -9,6 +10,7 @@ const MAX_BYTES = 5 * 1024 * 1024;
  * Files are parsed in memory and never executed or stored.
  */
 export const POST = handle(async (req: Request) => {
+  await enforceLimits([`parse:${clientKey(req)}`, LIMITS.parseFile]);
   const form = await req.formData().catch(() => null);
   const file = form?.get("file");
   if (!(file instanceof File)) throw new BadRequest("Attach a file.");

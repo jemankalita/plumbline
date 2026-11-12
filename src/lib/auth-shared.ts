@@ -10,6 +10,18 @@ export const ROLES: { id: Role; name: string; person: string; blurb: string }[] 
   { id: "admin", name: "Admin", person: "Dev · brand ops", blurb: "Owns the Brand Kit: rules, terms, facts and palette." },
 ];
 
+/** Two fictional organisations. Each sees only its own kit, drafts, decisions and audit log. */
+export const ORGS: { id: string; name: string; blurb: string; idPrefix: string }[] = [
+  { id: "kit_quickkart", name: "QuickKart", blurb: "Quick-commerce groceries", idPrefix: "" },
+  { id: "kit_harbour", name: "Harbour & Pine", blurb: "Homewares and furniture", idPrefix: "hp-" },
+];
+
+export const DEFAULT_KIT_ID = ORGS[0].id;
+
+export function isKitId(v: unknown): v is string {
+  return ORGS.some((o) => o.id === v);
+}
+
 export type Action =
   | "submit"
   | "editDraft"
@@ -23,7 +35,7 @@ export type Action =
 const MATRIX: Record<Action, Role[]> = {
   submit: ["creator", "admin"],
   editDraft: ["creator", "admin"],
-  decideFinding: ["creator", "admin"],
+  decideFinding: ["creator", "reviewer", "approver", "admin"],
   clearClaim: ["reviewer", "approver", "admin"],
   overrideBlocker: ["approver"],
   approve: ["approver"],

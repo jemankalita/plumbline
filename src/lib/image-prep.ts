@@ -1,10 +1,13 @@
 // Browser side of image handling. Colours are read here; only a small copy leaves the device.
 
 import { dominantColors } from "./engine/color";
+import { colorAreas } from "./engine/palette";
 import type { ImageInput } from "./types";
 
 const MAX_BYTES = 8 * 1024 * 1024;
 const COLOR_SAMPLE_PX = 120;
+const AREA_SAMPLE_PX = 320;
+const MAX_AREAS = 12;
 const MAX_DATA_URL = 380_000; // stays under the API limit on thumbnails
 const ATTEMPTS = [
   { px: 768, quality: 0.8 },
@@ -41,9 +44,11 @@ export async function prepareImage(file: Blob, name: string, altText = ""): Prom
     const img = await loadImage(url);
     const sample = draw(img, COLOR_SAMPLE_PX);
     const colors = dominantColors(sample.ctx.getImageData(0, 0, sample.canvas.width, sample.canvas.height).data, 4);
+    const areaSample = draw(img, AREA_SAMPLE_PX);
+    const areas = colorAreas({ data: areaSample.ctx.getImageData(0, 0, areaSample.canvas.width, areaSample.canvas.height).data, width: areaSample.canvas.width, height: areaSample.canvas.height }).slice(0, MAX_AREAS);
     const thumbnail =
       ATTEMPTS.map(({ px, quality }) => draw(img, px).canvas.toDataURL("image/jpeg", quality)).find((d) => d.length < MAX_DATA_URL) ?? null;
-    return { name, altText, colors, thumbnail };
+    return { name, altText, colors, colorAreas: areas, thumbnail };
   } finally {
     URL.revokeObjectURL(url);
   }
