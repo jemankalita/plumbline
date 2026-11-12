@@ -1,5 +1,7 @@
 // Shown inside the workspace while a page loads its data, so a click never looks ignored.
-export default function Loading() {
+// Each list page opts in with its own loading.tsx. The draft page does not, because a loading
+// boundary starts the response before the page runs, and then a missing draft can't return 404.
+export function PageSkeleton() {
   return (
     <div className="grid gap-6" role="status" aria-live="polite">
       <span className="sr-only">Loading…</span>
